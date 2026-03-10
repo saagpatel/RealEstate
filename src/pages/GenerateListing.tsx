@@ -12,14 +12,26 @@ import { BrandVoiceSelector } from "@/components/brand/BrandVoiceSelector";
 import { useStreamingGeneration } from "@/hooks/useStreamingGeneration";
 import { useGenerationStore } from "@/stores/generationStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import type { ListingStyle, ListingTone, ListingLength, Listing, BrandVoice } from "@/lib/types";
+import type {
+  ListingStyle,
+  ListingTone,
+  ListingLength,
+  Listing,
+  BrandVoice,
+} from "@/lib/types";
 import { listBrandVoices } from "@/lib/tauri";
 
 export function GenerateListing() {
   const { id: propertyId } = useParams<{ id: string }>();
-  const { generate, isGenerating, streamedText, error } = useStreamingGeneration();
-  const { generations, isLoadingHistory, loadGenerations, toggleFavorite, deleteGeneration } =
-    useGenerationStore();
+  const { generate, isGenerating, streamedText, error } =
+    useStreamingGeneration();
+  const {
+    generations,
+    isLoadingHistory,
+    loadGenerations,
+    toggleFavorite,
+    deleteGeneration,
+  } = useGenerationStore();
   const resetGeneration = useGenerationStore((s) => s.resetGeneration);
   const apiKey = useSettingsStore((s) => s.apiKey);
   const defaultStyle = useSettingsStore((s) => s.defaultStyle);
@@ -62,24 +74,45 @@ export function GenerateListing() {
       seoKeywords,
       brandVoiceId,
     });
-  }, [propertyId, apiKey, style, tone, length, seoKeywords, brandVoiceId, generate]);
+  }, [
+    propertyId,
+    apiKey,
+    style,
+    tone,
+    length,
+    seoKeywords,
+    brandVoiceId,
+    generate,
+  ]);
 
   const handleSelectHistory = useCallback(
     (listing: Listing) => {
       resetGeneration();
       useGenerationStore.getState().finishGeneration(listing.content);
     },
-    [resetGeneration]
+    [resetGeneration],
   );
 
   return (
     <div className="flex gap-6">
       {/* Left panel: Controls */}
       <div className="w-80 shrink-0 space-y-5">
-        <StyleSelector value={style} onChange={setStyle} disabled={isGenerating} />
+        <StyleSelector
+          value={style}
+          onChange={setStyle}
+          disabled={isGenerating}
+        />
         <ToneSelector value={tone} onChange={setTone} disabled={isGenerating} />
-        <LengthSelector value={length} onChange={setLength} disabled={isGenerating} />
-        <KeywordInput value={seoKeywords} onChange={setSeoKeywords} disabled={isGenerating} />
+        <LengthSelector
+          value={length}
+          onChange={setLength}
+          disabled={isGenerating}
+        />
+        <KeywordInput
+          value={seoKeywords}
+          onChange={setSeoKeywords}
+          disabled={isGenerating}
+        />
         <BrandVoiceSelector
           voices={brandVoices}
           value={brandVoiceId}

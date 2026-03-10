@@ -5,13 +5,19 @@ use crate::db::listings::Listing;
 use crate::db::photos::Photo;
 use crate::db::properties::Property;
 use crate::error::AppError;
+use crate::export::templates::ExportTemplate;
 
 /// Generate a DOCX document for a property with its listings and photos
 pub fn generate_docx(
     property: &Property,
     listings: &[Listing],
     photos: &[Photo],
+    template: ExportTemplate,
 ) -> Result<Vec<u8>, AppError> {
+    let config = template.config();
+    let heading_1_size = usize::from(config.header_font_size) * 2;
+    let heading_2_size = usize::from(config.header_font_size.saturating_sub(2)) * 2;
+    let body_size = usize::from(config.body_font_size) * 2;
     let mut docx = Docx::new();
 
     // Property header
@@ -21,7 +27,7 @@ pub fn generate_docx(
     );
     docx = docx.add_paragraph(
         Paragraph::new()
-            .add_run(Run::new().add_text(&address).bold())
+            .add_run(Run::new().add_text(&address).bold().size(heading_1_size))
             .style("Heading1"),
     );
 
@@ -35,35 +41,49 @@ pub fn generate_docx(
         property.sqft,
         property.property_type.replace('_', " "),
     );
-    docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_text(&details)));
+    docx =
+        docx.add_paragraph(Paragraph::new().add_run(Run::new().add_text(&details).size(body_size)));
 
     if let Some(year) = property.year_built {
         docx = docx.add_paragraph(
-            Paragraph::new().add_run(Run::new().add_text(&format!("Built: {}", year))),
+            Paragraph::new().add_run(
+                Run::new()
+                    .add_text(format!("Built: {}", year))
+                    .size(body_size),
+            ),
         );
     }
 
     // Key features
-    let features: Vec<String> =
-        serde_json::from_str(&property.key_features).unwrap_or_default();
+    let features: Vec<String> = serde_json::from_str(&property.key_features).unwrap_or_default();
     if !features.is_empty() {
         docx = docx.add_paragraph(Paragraph::new());
         docx = docx.add_paragraph(
             Paragraph::new()
-                .add_run(Run::new().add_text("Key Features").bold())
+                .add_run(
+                    Run::new()
+                        .add_text("Key Features")
+                        .bold()
+                        .size(heading_2_size),
+                )
                 .style("Heading2"),
         );
         docx = docx.add_paragraph(
-            Paragraph::new().add_run(Run::new().add_text(&features.join(" • "))),
+            Paragraph::new().add_run(Run::new().add_text(features.join(" • ")).size(body_size)),
         );
     }
 
     // Photos section
-    if !photos.is_empty() {
+    if config.include_photos && !photos.is_empty() {
         docx = docx.add_paragraph(Paragraph::new());
         docx = docx.add_paragraph(
             Paragraph::new()
-                .add_run(Run::new().add_text("Property Photos").bold())
+                .add_run(
+                    Run::new()
+                        .add_text("Property Photos")
+                        .bold()
+                        .size(heading_2_size),
+                )
                 .style("Heading2"),
         );
 
@@ -75,16 +95,18 @@ pub fn generate_docx(
                 const IMAGE_HEIGHT_EMU: u32 = 3_000_000; // ~3.3 inches
                 let pic = Pic::new(&image_bytes).size(IMAGE_WIDTH_EMU, IMAGE_HEIGHT_EMU);
 
-                docx = docx.add_paragraph(
-                    Paragraph::new().add_run(Run::new().add_image(pic)),
-                );
+                docx = docx.add_paragraph(Paragraph::new().add_run(Run::new().add_image(pic)));
 
                 // Add caption if available
                 if let Some(ref caption) = photo.caption {
                     if !caption.is_empty() {
                         docx = docx.add_paragraph(
-                            Paragraph::new()
-                                .add_run(Run::new().add_text(caption).italic().size(18)), // 9pt font
+                            Paragraph::new().add_run(
+                                Run::new()
+                                    .add_text(caption)
+                                    .italic()
+                                    .size(body_size.saturating_sub(2)),
+                            ),
                         );
                     }
                 }
@@ -114,7 +136,12 @@ pub fn generate_docx(
 
         docx = docx.add_paragraph(
             Paragraph::new()
-                .add_run(Run::new().add_text(&section_title).bold())
+                .add_run(
+                    Run::new()
+                        .add_text(&section_title)
+                        .bold()
+                        .size(heading_2_size),
+                )
                 .style("Heading2"),
         );
 
@@ -122,8 +149,9 @@ pub fn generate_docx(
         for paragraph in listing.content.split("\n\n") {
             let trimmed = paragraph.trim();
             if !trimmed.is_empty() {
-                docx = docx
-                    .add_paragraph(Paragraph::new().add_run(Run::new().add_text(trimmed)));
+                docx = docx.add_paragraph(
+                    Paragraph::new().add_run(Run::new().add_text(trimmed).size(body_size)),
+                );
             }
         }
     }
@@ -203,7 +231,7 @@ mod tests {
     fn test_generate_docx_produces_valid_zip() {
         let property = sample_property();
         let listings = vec![sample_listing()];
-        let result = generate_docx(&property, &listings);
+        let result = generate_docx(&property, &listings, &[], ExportTemplate::Professional);
         assert!(result.is_ok());
         let bytes = result.unwrap();
         // DOCX is a ZIP file — check magic bytes

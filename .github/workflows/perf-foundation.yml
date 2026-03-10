@@ -1,0 +1,87 @@
+name: perf-foundation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+  push:
+    branches: ["codex/**"]
+
+jobs:
+  perf-bundle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm perf:bundle
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-bundle-report
+          path: .perf-results/bundle.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  perf-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm perf:build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-build-report
+          path: .perf-results/build-time.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  perf-assets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/perf/check-assets.sh
+
+  perf-memory:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm perf:memory
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-memory-report
+          path: .perf-results/memory.json
+          if-no-files-found: ignore
+          retention-days: 7

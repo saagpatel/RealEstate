@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { ExportMenu } from "@/components/export/ExportMenu";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PropertyForm } from "@/components/property/PropertyForm";
 import { PhotoUploader } from "@/components/property/PhotoUploader";
@@ -69,21 +70,37 @@ export function PropertyDetail() {
     photos,
     isLoading: photosLoading,
     isImporting,
+    isReordering,
     error: photosError,
     importPhotos: handleImportPhotos,
     deletePhoto: handleDeletePhoto,
+    reorderPhotos: handleReorderPhotos,
   } = usePhotos(id);
 
   const [property, setProperty] = useState<Property | null>(null);
+  const [listingIds, setListingIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+
+  const loadListingIds = useCallback(async () => {
+    if (!id) return [];
+
+    const listings = await tauri.listListings(id);
+    const ids = listings.map((listing) => listing.id);
+    setListingIds(ids);
+    return ids;
+  }, [id]);
 
   const loadProperty = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
     try {
-      const p = await tauri.getProperty(id);
+      const [p, listings] = await Promise.all([
+        tauri.getProperty(id),
+        loadListingIds(),
+      ]);
       setProperty(p);
+      setListingIds(listings);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to load property";
@@ -91,7 +108,7 @@ export function PropertyDetail() {
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, loadListingIds]);
 
   useEffect(() => {
     void loadProperty();
@@ -126,8 +143,38 @@ export function PropertyDetail() {
     }
   };
 
+  const movePhoto = async (photoId: string, direction: "left" | "right") => {
+    const index = photos.findIndex((photo) => photo.id === photoId);
+    if (index === -1) return;
+
+    const nextIndex = direction === "left" ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= photos.length) return;
+
+    const reordered = [...photos];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(nextIndex, 0, moved);
+    await handleReorderPhotos(reordered.map((photo) => photo.id));
+  };
+
+  const makePrimaryPhoto = async (photoId: string) => {
+    const selected = photos.find((photo) => photo.id === photoId);
+    if (!selected) return;
+
+    const reordered = [
+      selected.id,
+      ...photos
+        .filter((photo) => photo.id !== photoId)
+        .map((photo) => photo.id),
+    ];
+    await handleReorderPhotos(reordered);
+  };
+
   const tabs = [
-    { to: `/property/${id}/listing`, icon: FileText, label: "Generate Listing" },
+    {
+      to: `/property/${id}/listing`,
+      icon: FileText,
+      label: "Generate Listing",
+    },
     { to: `/property/${id}/social`, icon: Share2, label: "Social Media" },
     { to: `/property/${id}/email`, icon: Mail, label: "Email Campaign" },
   ];
@@ -165,6 +212,11 @@ export function PropertyDetail() {
         subtitle={`${property.city}, ${property.state} ${property.zip}`}
         actions={
           <div className="flex gap-2">
+            <ExportMenu
+              propertyId={property.id}
+              listingIds={listingIds}
+              getListingIds={loadListingIds}
+            />
             <button
               onClick={() => navigate("/")}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
@@ -336,12 +388,23 @@ export function PropertyDetail() {
       {/* Photos Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
-            Photos
-          </h2>
-          <span className="text-xs text-gray-500">
-            {photos.length} photo{photos.length !== 1 ? "s" : ""}
-          </span>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+              Photos
+            </h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Drag-free ordering is enabled here: the first photo becomes the
+              primary cover image used in exports.
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-xs text-gray-500">
+              {photos.length} photo{photos.length !== 1 ? "s" : ""}
+            </span>
+            {isReordering && (
+              <p className="mt-1 text-xs text-blue-600">Saving new order...</p>
+            )}
+          </div>
         </div>
         {photosError && (
           <p className="text-sm text-red-600 mb-3">{photosError}</p>
@@ -349,7 +412,10 @@ export function PropertyDetail() {
         <PhotoGrid
           photos={photos}
           isLoading={photosLoading}
+          isReordering={isReordering}
           onDelete={handleDeletePhoto}
+          onMakePrimary={makePrimaryPhoto}
+          onMove={movePhoto}
         />
         <div className={photos.length > 0 ? "mt-4" : ""}>
           <PhotoUploader

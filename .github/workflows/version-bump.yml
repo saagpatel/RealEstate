@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version_type:
-        description: 'Version bump type'
+        description: "Version bump type"
         required: true
         type: choice
         options:
@@ -12,9 +12,13 @@ on:
           - minor
           - major
       changelog_entry:
-        description: 'Changelog entry (what changed)'
+        description: "Changelog entry (what changed)"
         required: true
         type: string
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   bump-version:
@@ -25,21 +29,17 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          version: 10.31.0
 
       - name: Bump package.json version
         id: package_version
@@ -81,21 +81,48 @@ jobs:
 
           mv CHANGELOG_NEW.md CHANGELOG.md
 
-      - name: Commit version bump
+      - name: Prepare release branch name
+        id: release_branch
         run: |
           NEW_VERSION="${{ steps.package_version.outputs.new_version }}"
-          git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json CHANGELOG.md
-          git commit -m "chore: bump version to v$NEW_VERSION"
-          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          echo "branch_name=codex/chore/release-v${NEW_VERSION//./-}" >> "$GITHUB_OUTPUT"
 
-      - name: Push changes
-        run: |
-          git push origin main
-          git push origin --tags
-
-      - name: Trigger build workflow
-        uses: peter-evans/repository-dispatch@v2
+      - name: Open release prep PR
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: version-bumped
-          client-payload: '{"version": "${{ steps.package_version.outputs.new_version }}"}'
+          add-paths: |
+            package.json
+            src-tauri/Cargo.toml
+            src-tauri/tauri.conf.json
+            CHANGELOG.md
+          commit-message: "chore: prepare release v${{ steps.package_version.outputs.new_version }}"
+          branch: ${{ steps.release_branch.outputs.branch_name }}
+          base: ${{ github.event.repository.default_branch }}
+          delete-branch: true
+          title: "chore: prepare release v${{ steps.package_version.outputs.new_version }}"
+          body: |
+            ## What
+            - prepare release v${{ steps.package_version.outputs.new_version }}
+            - sync desktop app version files
+            - add the requested changelog entry
+
+            ## Why
+            - keep release preparation on a `codex/*` branch before tagging and publishing
+
+            ## How
+            - bump package, Cargo, and Tauri app versions together
+            - update CHANGELOG.md for the release candidate
+
+            ## Testing
+            - Commands run:
+            - Results:
+
+            ## Performance impact
+            - Bundle delta:
+            - Build time delta:
+            - Asset delta:
+            - Memory delta:
+
+            ## Risk / Notes
+            - Tag and publish only after this PR is merged and the release workflow passes.

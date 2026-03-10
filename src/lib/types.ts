@@ -70,6 +70,26 @@ export type ListingStyle = "luxury" | "family" | "investment" | "first_time";
 export type ListingTone = "professional" | "warm" | "exciting";
 export type ListingLength = "short" | "medium" | "long";
 
+export interface AnalyticsSummary {
+  totalGenerations: number;
+  totalCostCents: number;
+  averageLatencyMs: number;
+  successRate: number;
+}
+
+export interface CsvImportError {
+  rowNumber: number;
+  address: string;
+  error: string;
+}
+
+export interface CsvImportResult {
+  total: number;
+  successful: number;
+  failed: number;
+  errors: CsvImportError[];
+}
+
 export interface BrandVoice {
   id: string;
   name: string;
@@ -112,6 +132,8 @@ export interface EmailGenerationOptions {
 }
 
 export type EmailTemplate = "buyer" | "seller" | "open_house";
+
+export type ExportTemplate = "professional" | "luxury" | "minimal";
 
 export type StreamEvent =
   | { event: "started"; data: { estimatedTokens: number } }

@@ -1,45 +1,47 @@
 use genpdf::elements::{Break, Image, Paragraph};
 use genpdf::fonts;
 use genpdf::style::{Color, Style};
-use genpdf::{Document, Element, Mm, SimplePageDecorator};
-use image::DynamicImage;
+use genpdf::{Document, Element, SimplePageDecorator};
 
 use crate::db::listings::Listing;
 use crate::db::photos::Photo;
 use crate::db::properties::Property;
 use crate::error::AppError;
+use crate::export::templates::ExportTemplate;
 
 /// Generate a PDF marketing package for a property with its listings and photos
 pub fn generate_pdf(
     property: &Property,
     listings: &[Listing],
     photos: &[Photo],
+    template: ExportTemplate,
 ) -> Result<Vec<u8>, AppError> {
+    let config = template.config();
     // Use built-in Helvetica font (always available)
-    let font_family =
-        fonts::from_files("", "Helvetica", None).unwrap_or_else(|_| {
-            // Fallback: use Liberation Sans if Helvetica not found
-            // genpdf provides built-in fonts as fallback
-            fonts::from_files("", "LiberationSans", None)
-                .unwrap_or_else(|_| {
-                    // Last resort: create a minimal font family
-                    let font_data = genpdf::fonts::FontData::new(
-                        Vec::new(), // Will fail gracefully
-                        None,
-                    );
-                    let regular = match font_data {
-                        Ok(f) => f,
-                        Err(_) => return fonts::from_files("/System/Library/Fonts", "Helvetica", None)
-                            .expect("Could not load any font"),
-                    };
-                    genpdf::fonts::FontFamily {
-                        regular: regular.clone(),
-                        bold: regular.clone(),
-                        italic: regular.clone(),
-                        bold_italic: regular,
-                    }
-                })
-        });
+    let font_family = fonts::from_files("", "Helvetica", None).unwrap_or_else(|_| {
+        // Fallback: use Liberation Sans if Helvetica not found
+        // genpdf provides built-in fonts as fallback
+        fonts::from_files("", "LiberationSans", None).unwrap_or_else(|_| {
+            // Last resort: create a minimal font family
+            let font_data = genpdf::fonts::FontData::new(
+                Vec::new(), // Will fail gracefully
+                None,
+            );
+            let regular = match font_data {
+                Ok(f) => f,
+                Err(_) => {
+                    return fonts::from_files("/System/Library/Fonts", "Helvetica", None)
+                        .expect("Could not load any font")
+                }
+            };
+            genpdf::fonts::FontFamily {
+                regular: regular.clone(),
+                bold: regular.clone(),
+                italic: regular.clone(),
+                bold_italic: regular,
+            }
+        })
+    });
 
     let mut doc = Document::new(font_family);
     doc.set_title("Property Marketing Package");
@@ -54,81 +56,108 @@ pub fn generate_pdf(
             "{}, {}, {} {}",
             property.address, property.city, property.state, property.zip
         ))
-        .styled(Style::new().bold().with_font_size(18)),
+        .styled(
+            Style::new()
+                .bold()
+                .with_font_size(config.header_font_size)
+                .with_color(Color::Rgb(
+                    config.primary_color.0,
+                    config.primary_color.1,
+                    config.primary_color.2,
+                )),
+        ),
     );
 
     doc.push(Break::new(0.5));
 
     // Property details
     let price = format_price_dollars(property.price);
-    doc.push(Paragraph::new(format!(
-        "${} | {} bed / {} bath / {} sqft | {}",
-        price,
-        property.beds,
-        property.baths,
-        property.sqft,
-        property.property_type.replace('_', " "),
-    )));
+    doc.push(
+        Paragraph::new(format!(
+            "${} | {} bed / {} bath / {} sqft | {}",
+            price,
+            property.beds,
+            property.baths,
+            property.sqft,
+            property.property_type.replace('_', " "),
+        ))
+        .styled(Style::new().with_font_size(config.body_font_size)),
+    );
 
     if let Some(ref year) = property.year_built {
-        doc.push(Paragraph::new(format!("Built: {}", year)));
+        doc.push(
+            Paragraph::new(format!("Built: {}", year))
+                .styled(Style::new().with_font_size(config.body_font_size)),
+        );
     }
 
     doc.push(Break::new(1.0));
 
     // Key features
-    let features: Vec<String> =
-        serde_json::from_str(&property.key_features).unwrap_or_default();
+    let features: Vec<String> = serde_json::from_str(&property.key_features).unwrap_or_default();
     if !features.is_empty() {
         doc.push(
-            Paragraph::new("Key Features")
-                .styled(Style::new().bold().with_font_size(14)),
+            Paragraph::new("Key Features").styled(
+                Style::new()
+                    .bold()
+                    .with_font_size(config.header_font_size.saturating_sub(2))
+                    .with_color(Color::Rgb(
+                        config.primary_color.0,
+                        config.primary_color.1,
+                        config.primary_color.2,
+                    )),
+            ),
         );
-        doc.push(Paragraph::new(features.join(" • ")));
+        doc.push(
+            Paragraph::new(features.join(" • "))
+                .styled(Style::new().with_font_size(config.body_font_size)),
+        );
         doc.push(Break::new(0.5));
     }
 
     // Photos section
-    if !photos.is_empty() {
+    if config.include_photos && !photos.is_empty() {
         doc.push(Break::new(1.0));
         doc.push(
-            Paragraph::new("Property Photos")
-                .styled(Style::new().bold().with_font_size(14)),
+            Paragraph::new("Property Photos").styled(
+                Style::new()
+                    .bold()
+                    .with_font_size(config.header_font_size.saturating_sub(2))
+                    .with_color(Color::Rgb(
+                        config.secondary_color.0,
+                        config.secondary_color.1,
+                        config.secondary_color.2,
+                    )),
+            ),
         );
         doc.push(Break::new(0.5));
 
         // Add up to 6 photos (3x2 grid layout)
         for (i, photo) in photos.iter().take(6).enumerate() {
-            match load_and_resize_image(&photo.original_path, 400) {
-                Ok(image_data) => {
-                    // Add the image
-                    match Image::from_dynamic_image(&image_data) {
-                        Ok(img) => {
-                            doc.push(img.with_scale(genpdf::Scale::new(0.5, 0.5)));
+            match Image::from_path(&photo.original_path) {
+                Ok(img) => {
+                    doc.push(img.with_scale(genpdf::Scale::new(0.35, 0.35)));
 
-                            // Add caption if available
-                            if let Some(ref caption) = photo.caption {
-                                if !caption.is_empty() {
-                                    doc.push(
-                                        Paragraph::new(caption)
-                                            .styled(Style::new().with_color(Color::Rgb(100, 100, 100)).with_font_size(9)),
-                                    );
-                                }
-                            }
+                    // Add caption if available
+                    if let Some(ref caption) = photo.caption {
+                        if !caption.is_empty() {
+                            doc.push(
+                                Paragraph::new(caption).styled(
+                                    Style::new()
+                                        .with_color(Color::Rgb(100, 100, 100))
+                                        .with_font_size(config.body_font_size.saturating_sub(1)),
+                                ),
+                            );
+                        }
+                    }
 
-                            // Add spacing between photos
-                            if i < photos.len() - 1 {
-                                doc.push(Break::new(0.5));
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to add image to PDF: {}", e);
-                            // Continue with other photos even if one fails
-                        }
+                    // Add spacing between photos
+                    if i < photos.len() - 1 {
+                        doc.push(Break::new(0.5));
                     }
                 }
                 Err(e) => {
-                    eprintln!("Failed to load image {}: {}", photo.original_path, e);
+                    eprintln!("Failed to add image {} to PDF: {}", photo.original_path, e);
                     // Continue with other photos even if one fails
                 }
             }
@@ -153,8 +182,16 @@ pub fn generate_pdf(
         };
 
         doc.push(
-            Paragraph::new(section_title)
-                .styled(Style::new().bold().with_font_size(14)),
+            Paragraph::new(section_title).styled(
+                Style::new()
+                    .bold()
+                    .with_font_size(config.header_font_size.saturating_sub(2))
+                    .with_color(Color::Rgb(
+                        config.primary_color.0,
+                        config.primary_color.1,
+                        config.primary_color.2,
+                    )),
+            ),
         );
         doc.push(Break::new(0.3));
 
@@ -162,7 +199,10 @@ pub fn generate_pdf(
         for paragraph in listing.content.split("\n\n") {
             let trimmed = paragraph.trim();
             if !trimmed.is_empty() {
-                doc.push(Paragraph::new(trimmed));
+                doc.push(
+                    Paragraph::new(trimmed)
+                        .styled(Style::new().with_font_size(config.body_font_size)),
+                );
                 doc.push(Break::new(0.3));
             }
         }
@@ -190,54 +230,9 @@ fn format_price_dollars(cents: i64) -> String {
     result
 }
 
-/// Load an image from disk and resize it to fit within max_width pixels
-fn load_and_resize_image(path: &str, max_width: u32) -> Result<DynamicImage, AppError> {
-    // Load image
-    let img = image::open(path)
-        .map_err(|e| AppError::Export(format!("Failed to load image {}: {}", path, e)))?;
-
-    // Calculate new dimensions maintaining aspect ratio
-    let (width, height) = img.dimensions();
-    if width <= max_width {
-        return Ok(img);
-    }
-
-    let scale = max_width as f32 / width as f32;
-    let new_height = (height as f32 * scale) as u32;
-
-    // Resize using Lanczos3 for high quality
-    Ok(img.resize(max_width, new_height, image::imageops::FilterType::Lanczos3))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn sample_property() -> Property {
-        Property {
-            id: "test".to_string(),
-            address: "123 Oak St".to_string(),
-            city: "San Francisco".to_string(),
-            state: "CA".to_string(),
-            zip: "94105".to_string(),
-            beds: 3,
-            baths: 2.5,
-            sqft: 1800,
-            price: 95000000,
-            property_type: "single_family".to_string(),
-            year_built: Some(2015),
-            lot_size: None,
-            parking: None,
-            key_features: r#"["pool","hardwood floors"]"#.to_string(),
-            neighborhood: None,
-            neighborhood_highlights: "[]".to_string(),
-            school_district: None,
-            nearby_amenities: "[]".to_string(),
-            agent_notes: None,
-            created_at: "2024-01-01".to_string(),
-            updated_at: "2024-01-01".to_string(),
-        }
-    }
 
     #[test]
     fn test_format_price_dollars() {

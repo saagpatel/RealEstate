@@ -1,23 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { MemoryRouter, Route, Routes, useNavigate, useLocation } from "react-router-dom";
-import { createElement } from "react";
 
 const mockNavigate = vi.fn();
+const mockUseLocation = vi.fn(() => ({ pathname: "/" }));
 
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom",
+    );
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useLocation: () => ({ pathname: "/" }),
+    useLocation: () => mockUseLocation(),
   };
 });
 
 describe("useKeyboardShortcuts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseLocation.mockReturnValue({ pathname: "/" });
     document.body.innerHTML = "";
   });
 
@@ -30,7 +33,7 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(mockNavigate).toHaveBeenCalledWith("/property/new");
   });
@@ -44,7 +47,7 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(mockNavigate).toHaveBeenCalledWith("/property/new");
   });
@@ -88,6 +91,10 @@ describe("useKeyboardShortcuts", () => {
 
     const div = document.createElement("div");
     div.contentEditable = "true";
+    Object.defineProperty(div, "isContentEditable", {
+      configurable: true,
+      value: true,
+    });
     document.body.appendChild(div);
 
     const event = new KeyboardEvent("keydown", {
@@ -109,7 +116,7 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(mockNavigate).not.toHaveBeenCalled();
   });
@@ -124,13 +131,13 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("should click generate button on Cmd+Enter on generation page", () => {
-    vi.mocked(useLocation).mockReturnValue({ pathname: "/property/123/listing" } as any);
+    mockUseLocation.mockReturnValue({ pathname: "/property/123/listing" });
 
     renderHook(() => useKeyboardShortcuts());
 
@@ -147,13 +154,13 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(clickSpy).toHaveBeenCalled();
   });
 
   it("should work on social generation page", () => {
-    vi.mocked(useLocation).mockReturnValue({ pathname: "/property/123/social" } as any);
+    mockUseLocation.mockReturnValue({ pathname: "/property/123/social" });
 
     renderHook(() => useKeyboardShortcuts());
 
@@ -169,13 +176,13 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(clickSpy).toHaveBeenCalled();
   });
 
   it("should work on email generation page", () => {
-    vi.mocked(useLocation).mockReturnValue({ pathname: "/property/123/email" } as any);
+    mockUseLocation.mockReturnValue({ pathname: "/property/123/email" });
 
     renderHook(() => useKeyboardShortcuts());
 
@@ -191,13 +198,13 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(clickSpy).toHaveBeenCalled();
   });
 
   it("should not click generate button on non-generation pages", () => {
-    vi.mocked(useLocation).mockReturnValue({ pathname: "/dashboard" } as any);
+    mockUseLocation.mockReturnValue({ pathname: "/dashboard" });
 
     renderHook(() => useKeyboardShortcuts());
 
@@ -213,13 +220,13 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(clickSpy).not.toHaveBeenCalled();
   });
 
   it("should not click disabled buttons", () => {
-    vi.mocked(useLocation).mockReturnValue({ pathname: "/property/123/listing" } as any);
+    mockUseLocation.mockReturnValue({ pathname: "/property/123/listing" });
 
     renderHook(() => useKeyboardShortcuts());
 
@@ -236,7 +243,7 @@ describe("useKeyboardShortcuts", () => {
       bubbles: true,
     });
 
-    document.dispatchEvent(event);
+    window.dispatchEvent(event);
 
     expect(clickSpy).not.toHaveBeenCalled();
   });

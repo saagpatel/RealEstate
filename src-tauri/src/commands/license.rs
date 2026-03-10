@@ -22,9 +22,7 @@ pub async fn validate_license_key(
 }
 
 #[tauri::command]
-pub async fn check_license(
-    db: State<'_, SqlitePool>,
-) -> Result<LicenseStatus, AppError> {
+pub async fn check_license(db: State<'_, SqlitePool>) -> Result<LicenseStatus, AppError> {
     let license_key = settings::get(&db, "license_key").await.unwrap_or_default();
 
     if license_key.is_empty() {

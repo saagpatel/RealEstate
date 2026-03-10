@@ -11,19 +11,39 @@ import {
   Building2,
   Palette,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { LISTING_STYLES, LISTING_TONES, LISTING_LENGTHS, SETTING_KEYS } from "@/lib/constants";
+import {
+  AI_MODELS,
+  LISTING_STYLES,
+  LISTING_TONES,
+  LISTING_LENGTHS,
+  SETTING_KEYS,
+} from "@/lib/constants";
 import type { ListingStyle, ListingTone, ListingLength } from "@/lib/types";
 
 function isValidApiKey(key: string): boolean {
   return key === "" || key.startsWith("sk-ant-");
 }
 
+interface SettingsFormState {
+  apiKey: string;
+  aiModel: string;
+  agentName: string;
+  agentPhone: string;
+  agentEmail: string;
+  brokerageName: string;
+  defaultStyle: ListingStyle;
+  defaultTone: ListingTone;
+  defaultLength: ListingLength;
+}
+
 export function Settings() {
   const {
     apiKey,
+    aiModel,
     agentName,
     agentPhone,
     agentEmail,
@@ -40,8 +60,9 @@ export function Settings() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Local form state so edits don't immediately update global state
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<SettingsFormState>({
     apiKey: "",
+    aiModel: AI_MODELS[0].value,
     agentName: "",
     agentPhone: "",
     agentEmail: "",
@@ -56,6 +77,7 @@ export function Settings() {
     if (isLoaded) {
       setForm({
         apiKey,
+        aiModel,
         agentName,
         agentPhone,
         agentEmail,
@@ -65,7 +87,18 @@ export function Settings() {
         defaultLength,
       });
     }
-  }, [isLoaded, apiKey, agentName, agentPhone, agentEmail, brokerageName, defaultStyle, defaultTone, defaultLength]);
+  }, [
+    isLoaded,
+    apiKey,
+    aiModel,
+    agentName,
+    agentPhone,
+    agentEmail,
+    brokerageName,
+    defaultStyle,
+    defaultTone,
+    defaultLength,
+  ]);
 
   useEffect(() => {
     if (!isLoaded) {
@@ -74,15 +107,18 @@ export function Settings() {
   }, [isLoaded, loadSettings]);
 
   const updateField = useCallback(
-    <K extends keyof typeof form>(field: K, value: (typeof form)[K]) => {
+    <K extends keyof SettingsFormState>(
+      field: K,
+      value: SettingsFormState[K],
+    ) => {
       setForm((prev) => ({ ...prev, [field]: value }));
     },
-    []
+    [],
   );
 
   const handleSave = async () => {
     if (!isValidApiKey(form.apiKey)) {
-      toast.error("API key must start with \"sk-ant-\" or be empty");
+      toast.error('API key must start with "sk-ant-" or be empty');
       return;
     }
 
@@ -90,6 +126,7 @@ export function Settings() {
     try {
       await Promise.all([
         saveSetting(SETTING_KEYS.API_KEY, form.apiKey),
+        saveSetting(SETTING_KEYS.AI_MODEL, form.aiModel),
         saveSetting(SETTING_KEYS.AGENT_NAME, form.agentName),
         saveSetting(SETTING_KEYS.AGENT_PHONE, form.agentPhone),
         saveSetting(SETTING_KEYS.AGENT_EMAIL, form.agentEmail),
@@ -100,7 +137,8 @@ export function Settings() {
       ]);
       toast.success("Settings saved");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save settings";
+      const message =
+        err instanceof Error ? err.message : "Failed to save settings";
       toast.error(message);
     } finally {
       setIsSaving(false);
@@ -119,7 +157,7 @@ export function Settings() {
     <div>
       <PageHeader
         title="Settings"
-        subtitle="API key and agent profile configuration"
+        subtitle="Configure generation defaults, AI model choice, and agent profile details"
         actions={
           <button
             onClick={handleSave}
@@ -147,7 +185,10 @@ export function Settings() {
           </div>
           <p className="text-sm text-gray-500 mb-4">
             Required for AI-powered listing generation. Get your key from{" "}
-            <span className="font-medium text-gray-700">console.anthropic.com</span>.
+            <span className="font-medium text-gray-700">
+              console.anthropic.com
+            </span>
+            .
           </p>
           <div className="relative max-w-lg">
             <input
@@ -180,6 +221,52 @@ export function Settings() {
           )}
         </section>
 
+        <section className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-5 w-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">AI Model</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Choose which Claude model powers listing, social, email, and brand
+            voice generation.
+          </p>
+          <div className="max-w-2xl space-y-3">
+            {AI_MODELS.map((model) => {
+              const isSelected = form.aiModel === model.value;
+              return (
+                <label
+                  key={model.value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                    isSelected
+                      ? "border-blue-300 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="ai-model"
+                    value={model.value}
+                    checked={isSelected}
+                    onChange={(e) => updateField("aiModel", e.target.value)}
+                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {model.label}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {model.description}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {model.value}
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+
         {/* Agent Profile Section */}
         <section className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -189,7 +276,8 @@ export function Settings() {
             </h3>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Your contact information will be included in generated listings and marketing materials.
+            Your contact information will be included in generated listings and
+            marketing materials.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
             <div>
@@ -264,7 +352,8 @@ export function Settings() {
             </h3>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Pre-selected options when generating new listings. You can override these per listing.
+            Pre-selected options when generating new listings. You can override
+            these per listing.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl">
             <div>
@@ -285,7 +374,10 @@ export function Settings() {
                 ))}
               </select>
               <p className="mt-1 text-xs text-gray-400">
-                {LISTING_STYLES.find((s) => s.value === form.defaultStyle)?.description}
+                {
+                  LISTING_STYLES.find((s) => s.value === form.defaultStyle)
+                    ?.description
+                }
               </p>
             </div>
             <div>
@@ -306,7 +398,10 @@ export function Settings() {
                 ))}
               </select>
               <p className="mt-1 text-xs text-gray-400">
-                {LISTING_TONES.find((t) => t.value === form.defaultTone)?.description}
+                {
+                  LISTING_TONES.find((t) => t.value === form.defaultTone)
+                    ?.description
+                }
               </p>
             </div>
             <div>
@@ -327,7 +422,10 @@ export function Settings() {
                 ))}
               </select>
               <p className="mt-1 text-xs text-gray-400">
-                {LISTING_LENGTHS.find((l) => l.value === form.defaultLength)?.description}
+                {
+                  LISTING_LENGTHS.find((l) => l.value === form.defaultLength)
+                    ?.description
+                }
               </p>
             </div>
           </div>

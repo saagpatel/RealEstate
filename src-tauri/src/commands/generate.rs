@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use serde::Deserialize;
 use sqlx::SqlitePool;
 use tauri::ipc::Channel;
@@ -6,9 +8,10 @@ use tauri::State;
 use crate::ai::client::{ClaudeClient, StreamEvent};
 use crate::ai::email_generator;
 use crate::ai::listing_generator;
-use crate::ai::social_generator;
 use crate::ai::prompts::{AgentInfo, GenerationOptions};
-use crate::db::{brand_voice, listings, properties, settings};
+use crate::ai::social_generator;
+use crate::db::analytics::GenerationAnalyticsRecord;
+use crate::db::{analytics, brand_voice, listings, properties, settings};
 use crate::error::AppError;
 
 #[derive(Deserialize)]
@@ -68,9 +71,10 @@ pub async fn generate_listing(
     // Load AI model preference
     let model = settings::get(&db, "ai_model")
         .await
-        .unwrap_or_else(|_| "claude-sonnet-4-5-20250929".to_string());
+        .unwrap_or_else(|_| "claude-sonnet-4-20250514".to_string());
 
-    let client = ClaudeClient::new(api_key, model);
+    let client = ClaudeClient::new(api_key, model.clone());
+    let started_at = Instant::now();
 
     let result = listing_generator::generate_listing(
         &client,
@@ -80,7 +84,47 @@ pub async fn generate_listing(
         &agent_info,
         &on_event,
     )
-    .await?;
+    .await;
+
+    let latency_ms = started_at.elapsed().as_millis() as u64;
+    let result = match result {
+        Ok(result) => {
+            let _ = analytics::record_generation(
+                &db,
+                GenerationAnalyticsRecord {
+                    property_id: &property.id,
+                    generation_type: "listing",
+                    model_used: &model,
+                    input_tokens: result.input_tokens,
+                    output_tokens: result.output_tokens,
+                    cost_cents: result.cost_cents,
+                    latency_ms,
+                    success: true,
+                    error_message: None,
+                },
+            )
+            .await;
+            result
+        }
+        Err(err) => {
+            let _ = analytics::record_generation(
+                &db,
+                GenerationAnalyticsRecord {
+                    property_id: &property.id,
+                    generation_type: "listing",
+                    model_used: &model,
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    cost_cents: 0,
+                    latency_ms,
+                    success: false,
+                    error_message: Some(&err.to_string()),
+                },
+            )
+            .await;
+            return Err(err);
+        }
+    };
 
     // Save to database
     listings::save(
@@ -150,9 +194,10 @@ pub async fn generate_social(
     // Load AI model preference
     let model = settings::get(&db, "ai_model")
         .await
-        .unwrap_or_else(|_| "claude-sonnet-4-5-20250929".to_string());
+        .unwrap_or_else(|_| "claude-sonnet-4-20250514".to_string());
 
-    let client = ClaudeClient::new(api_key, model);
+    let client = ClaudeClient::new(api_key, model.clone());
+    let started_at = Instant::now();
 
     let result = social_generator::generate_social_posts(
         &client,
@@ -162,10 +207,50 @@ pub async fn generate_social(
         &agent_info,
         &on_event,
     )
-    .await?;
+    .await;
+
+    let generation_type = format!("social_{}", args.platform);
+    let latency_ms = started_at.elapsed().as_millis() as u64;
+    let result = match result {
+        Ok(result) => {
+            let _ = analytics::record_generation(
+                &db,
+                GenerationAnalyticsRecord {
+                    property_id: &property.id,
+                    generation_type: &generation_type,
+                    model_used: &model,
+                    input_tokens: result.input_tokens,
+                    output_tokens: result.output_tokens,
+                    cost_cents: result.cost_cents,
+                    latency_ms,
+                    success: true,
+                    error_message: None,
+                },
+            )
+            .await;
+            result
+        }
+        Err(err) => {
+            let _ = analytics::record_generation(
+                &db,
+                GenerationAnalyticsRecord {
+                    property_id: &property.id,
+                    generation_type: &generation_type,
+                    model_used: &model,
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    cost_cents: 0,
+                    latency_ms,
+                    success: false,
+                    error_message: Some(&err.to_string()),
+                },
+            )
+            .await;
+            return Err(err);
+        }
+    };
 
     // Save to database
-    let generation_type = format!("social_{}", args.platform);
     listings::save(
         &db,
         listings::CreateListingInput {
@@ -254,9 +339,10 @@ pub async fn generate_email(
     // Load AI model preference
     let model = settings::get(&db, "ai_model")
         .await
-        .unwrap_or_else(|_| "claude-sonnet-4-5-20250929".to_string());
+        .unwrap_or_else(|_| "claude-sonnet-4-20250514".to_string());
 
-    let client = ClaudeClient::new(api_key, model);
+    let client = ClaudeClient::new(api_key, model.clone());
+    let started_at = Instant::now();
 
     let result = email_generator::generate_email(
         &client,
@@ -266,10 +352,50 @@ pub async fn generate_email(
         &agent_info,
         &on_event,
     )
-    .await?;
+    .await;
 
     // Save to database with generation_type = "email_{template_type}"
     let generation_type = format!("email_{}", args.template_type);
+    let latency_ms = started_at.elapsed().as_millis() as u64;
+    let result = match result {
+        Ok(result) => {
+            let _ = analytics::record_generation(
+                &db,
+                GenerationAnalyticsRecord {
+                    property_id: &property.id,
+                    generation_type: &generation_type,
+                    model_used: &model,
+                    input_tokens: result.input_tokens,
+                    output_tokens: result.output_tokens,
+                    cost_cents: result.cost_cents,
+                    latency_ms,
+                    success: true,
+                    error_message: None,
+                },
+            )
+            .await;
+            result
+        }
+        Err(err) => {
+            let _ = analytics::record_generation(
+                &db,
+                GenerationAnalyticsRecord {
+                    property_id: &property.id,
+                    generation_type: &generation_type,
+                    model_used: &model,
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    cost_cents: 0,
+                    latency_ms,
+                    success: false,
+                    error_message: Some(&err.to_string()),
+                },
+            )
+            .await;
+            return Err(err);
+        }
+    };
+
     listings::save(
         &db,
         listings::CreateListingInput {

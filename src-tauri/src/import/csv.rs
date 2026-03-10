@@ -51,6 +51,20 @@ pub struct ImportError {
     pub error: String,
 }
 
+fn parse_json_array_field(
+    value: &str,
+    field_name: &str,
+    row_number: usize,
+    address: &str,
+) -> Result<Vec<String>, ImportError> {
+    let normalized = if value.trim().is_empty() { "[]" } else { value };
+    serde_json::from_str::<Vec<String>>(normalized).map_err(|_| ImportError {
+        row_number,
+        address: address.to_string(),
+        error: format!("{field_name} must be valid JSON array"),
+    })
+}
+
 /// Import properties from CSV data
 pub async fn import_from_csv(db: &SqlitePool, csv_data: &str) -> Result<ImportResult, AppError> {
     let cursor = Cursor::new(csv_data);
@@ -66,15 +80,13 @@ pub async fn import_from_csv(db: &SqlitePool, csv_data: &str) -> Result<ImportRe
         let row_number = idx + 2; // +2 because CSV is 1-indexed and has header
 
         match result {
-            Ok(row) => {
-                match import_single_property(db, row, row_number).await {
-                    Ok(_) => successful += 1,
-                    Err(e) => {
-                        failed += 1;
-                        errors.push(e);
-                    }
+            Ok(row) => match import_single_property(db, row, row_number).await {
+                Ok(_) => successful += 1,
+                Err(e) => {
+                    failed += 1;
+                    errors.push(e);
                 }
-            }
+            },
             Err(e) => {
                 failed += 1;
                 errors.push(ImportError {
@@ -101,7 +113,14 @@ async fn import_single_property(
     row_number: usize,
 ) -> Result<(), ImportError> {
     // Validate property type
-    let valid_types = ["single_family", "condo", "townhouse", "multi_family", "land", "commercial"];
+    let valid_types = [
+        "single_family",
+        "condo",
+        "townhouse",
+        "multi_family",
+        "land",
+        "commercial",
+    ];
     if !valid_types.contains(&row.property_type.as_str()) {
         return Err(ImportError {
             row_number,
@@ -147,53 +166,25 @@ async fn import_single_property(
         });
     }
 
-    // Ensure JSON fields are valid (default to empty array if empty)
-    let key_features = if row.key_features.is_empty() {
-        "[]".to_string()
-    } else {
-        row.key_features
-    };
-
-    let neighborhood_highlights = if row.neighborhood_highlights.is_empty() {
-        "[]".to_string()
-    } else {
-        row.neighborhood_highlights
-    };
-
-    let nearby_amenities = if row.nearby_amenities.is_empty() {
-        "[]".to_string()
-    } else {
-        row.nearby_amenities
-    };
-
-    // Validate JSON fields
-    if serde_json::from_str::<Vec<String>>(&key_features).is_err() {
-        return Err(ImportError {
-            row_number,
-            address: row.address.clone(),
-            error: "key_features must be valid JSON array".to_string(),
-        });
-    }
-
-    if serde_json::from_str::<Vec<String>>(&neighborhood_highlights).is_err() {
-        return Err(ImportError {
-            row_number,
-            address: row.address.clone(),
-            error: "neighborhood_highlights must be valid JSON array".to_string(),
-        });
-    }
-
-    if serde_json::from_str::<Vec<String>>(&nearby_amenities).is_err() {
-        return Err(ImportError {
-            row_number,
-            address: row.address.clone(),
-            error: "nearby_amenities must be valid JSON array".to_string(),
-        });
-    }
+    let address = row.address.clone();
+    let key_features =
+        parse_json_array_field(&row.key_features, "key_features", row_number, &address)?;
+    let neighborhood_highlights = parse_json_array_field(
+        &row.neighborhood_highlights,
+        "neighborhood_highlights",
+        row_number,
+        &address,
+    )?;
+    let nearby_amenities = parse_json_array_field(
+        &row.nearby_amenities,
+        "nearby_amenities",
+        row_number,
+        &address,
+    )?;
 
     // Create property input
     let input = CreatePropertyInput {
-        address: row.address.clone(),
+        address: address.clone(),
         city: row.city,
         state: row.state,
         zip: row.zip,
@@ -214,11 +205,13 @@ async fn import_single_property(
     };
 
     // Create property in database
-    properties::create(db, input).await.map_err(|e| ImportError {
-        row_number,
-        address: row.address,
-        error: format!("Database error: {}", e),
-    })?;
+    properties::create(db, input)
+        .await
+        .map_err(|e| ImportError {
+            row_number,
+            address,
+            error: format!("Database error: {}", e),
+        })?;
 
     Ok(())
 }

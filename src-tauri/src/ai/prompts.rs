@@ -139,7 +139,9 @@ Write the listing description now."#,
         property.state,
         property.zip,
         property.property_type.replace('_', " "),
-        property.year_built.map_or("N/A".to_string(), |y| y.to_string()),
+        property
+            .year_built
+            .map_or("N/A".to_string(), |y| y.to_string()),
         property.beds,
         property.baths,
         property.sqft,
@@ -254,7 +256,8 @@ PREVIEW: {{preview text}}
         serde_json::from_str(&property.key_features).unwrap_or_default();
     let price_formatted = format_price(property.price);
 
-    let user = format!(
+    let user =
+        format!(
         "Property: {}, {}, {} {}\n{} bed / {} bath / {} sqft | ${}\nFeatures: {}\n\nAnalysis: {}",
         property.address, property.city, property.state, property.zip,
         property.beds, property.baths, property.sqft, price_formatted,
@@ -281,7 +284,8 @@ OUTPUT: Respond with ONLY valid JSON matching this exact structure:
 }"#
         .to_string();
 
-    let mut user = String::from("Analyze these listing descriptions by the same real estate agent:\n\n");
+    let mut user =
+        String::from("Analyze these listing descriptions by the same real estate agent:\n\n");
     for (i, listing) in sample_listings.iter().enumerate() {
         user.push_str(&format!("LISTING {}:\n{}\n\n", i + 1, listing));
     }
@@ -304,16 +308,28 @@ Maintain this voice while following all other instructions."#,
         style["tone"].as_str().unwrap_or(""),
         style["vocabulary"]
             .as_array()
-            .map(|v| v.iter().filter_map(|s| s.as_str()).collect::<Vec<_>>().join(", "))
+            .map(|v| v
+                .iter()
+                .filter_map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", "))
             .unwrap_or_default(),
         style["sentence_patterns"].as_str().unwrap_or(""),
         style["themes"]
             .as_array()
-            .map(|v| v.iter().filter_map(|s| s.as_str()).collect::<Vec<_>>().join(", "))
+            .map(|v| v
+                .iter()
+                .filter_map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", "))
             .unwrap_or_default(),
         style["signature_phrases"]
             .as_array()
-            .map(|v| v.iter().filter_map(|s| s.as_str()).collect::<Vec<_>>().join(", "))
+            .map(|v| v
+                .iter()
+                .filter_map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", "))
             .unwrap_or_default(),
     ))
 }

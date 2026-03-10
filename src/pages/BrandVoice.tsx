@@ -7,8 +7,14 @@ import { BrandVoicePreview } from "@/components/brand/BrandVoicePreview";
 import { useBrandVoiceStore } from "@/stores/brandVoiceStore";
 
 export function BrandVoice() {
-  const { voices, isLoading, isCreating, fetchVoices, createVoice, deleteVoice } =
-    useBrandVoiceStore();
+  const {
+    voices,
+    isLoading,
+    isCreating,
+    fetchVoices,
+    createVoice,
+    deleteVoice,
+  } = useBrandVoiceStore();
 
   useEffect(() => {
     void fetchVoices();
@@ -17,7 +23,7 @@ export function BrandVoice() {
   const handleCreate = async (
     name: string,
     description: string | null,
-    samples: string[]
+    samples: string[],
   ) => {
     try {
       await createVoice(name, description, samples);

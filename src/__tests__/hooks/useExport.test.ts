@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useExport } from "@/hooks/useExport";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
@@ -31,19 +31,29 @@ describe("useExport", () => {
       const { result } = renderHook(() => useExport());
 
       await act(async () => {
-        await result.current.handleExportPdf("prop-1", ["listing-1"]);
+        await result.current.handleExportPdf(
+          "prop-1",
+          ["listing-1"],
+          "professional",
+        );
       });
 
-      expect(exportPdf).toHaveBeenCalledWith("prop-1", ["listing-1"]);
+      expect(exportPdf).toHaveBeenCalledWith(
+        "prop-1",
+        ["listing-1"],
+        "professional",
+      );
       expect(save).toHaveBeenCalledWith({
-        defaultPath: "property-listing.pdf",
+        defaultPath: "property-listing-professional.pdf",
         filters: [{ name: "PDF", extensions: ["pdf"] }],
       });
       expect(writeFile).toHaveBeenCalledWith(
         "/path/to/file.pdf",
-        expect.any(Uint8Array)
+        expect.any(Uint8Array),
       );
-      expect(toast.success).toHaveBeenCalledWith("PDF saved successfully");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Professional PDF saved successfully",
+      );
       expect(result.current.isExporting).toBe(false);
     });
 
@@ -73,29 +83,38 @@ describe("useExport", () => {
       });
 
       expect(toast.error).toHaveBeenCalledWith(
-        "PDF export failed: Export failed"
+        "PDF export failed: Export failed",
       );
       expect(result.current.isExporting).toBe(false);
     });
 
     it("should set isExporting during export", async () => {
-      let exportingDuringCall = false;
+      let resolveExport: ((value: number[]) => void) | undefined;
 
-      vi.mocked(exportPdf).mockImplementation(async () => {
-        exportingDuringCall = result.current.isExporting;
-        return [0x25, 0x50, 0x44, 0x46];
-      });
-      vi.mocked(save).mockResolvedValue("/path/to/file.pdf");
-      vi.mocked(writeFile).mockResolvedValue();
+      vi.mocked(exportPdf).mockImplementation(
+        () =>
+          new Promise<number[]>((resolve) => {
+            resolveExport = resolve;
+          }),
+      );
+      vi.mocked(save).mockImplementation(async () => "/path/to/file.pdf");
+      vi.mocked(writeFile).mockImplementation(async () => {});
 
       const { result } = renderHook(() => useExport());
 
-      await act(async () => {
-        await result.current.handleExportPdf("prop-1", ["listing-1"]);
+      act(() => {
+        void result.current.handleExportPdf("prop-1", ["listing-1"]);
       });
 
-      expect(exportingDuringCall).toBe(true);
-      expect(result.current.isExporting).toBe(false);
+      await waitFor(() => {
+        expect(result.current.isExporting).toBe(true);
+      });
+
+      resolveExport?.([0x25, 0x50, 0x44, 0x46]);
+
+      await waitFor(() => {
+        expect(result.current.isExporting).toBe(false);
+      });
     });
   });
 
@@ -109,19 +128,29 @@ describe("useExport", () => {
       const { result } = renderHook(() => useExport());
 
       await act(async () => {
-        await result.current.handleExportDocx("prop-1", ["listing-1"]);
+        await result.current.handleExportDocx(
+          "prop-1",
+          ["listing-1"],
+          "luxury",
+        );
       });
 
-      expect(exportDocx).toHaveBeenCalledWith("prop-1", ["listing-1"]);
+      expect(exportDocx).toHaveBeenCalledWith(
+        "prop-1",
+        ["listing-1"],
+        "luxury",
+      );
       expect(save).toHaveBeenCalledWith({
-        defaultPath: "property-listing.docx",
+        defaultPath: "property-listing-luxury.docx",
         filters: [{ name: "Word Document", extensions: ["docx"] }],
       });
       expect(writeFile).toHaveBeenCalledWith(
         "/path/to/file.docx",
-        expect.any(Uint8Array)
+        expect.any(Uint8Array),
       );
-      expect(toast.success).toHaveBeenCalledWith("DOCX saved successfully");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Luxury DOCX saved successfully",
+      );
       expect(result.current.isExporting).toBe(false);
     });
 
@@ -151,7 +180,7 @@ describe("useExport", () => {
       });
 
       expect(toast.error).toHaveBeenCalledWith(
-        "DOCX export failed: Export failed"
+        "DOCX export failed: Export failed",
       );
       expect(result.current.isExporting).toBe(false);
     });
@@ -172,11 +201,11 @@ describe("useExport", () => {
         ]);
       });
 
-      expect(exportDocx).toHaveBeenCalledWith("prop-1", [
-        "listing-1",
-        "listing-2",
-        "listing-3",
-      ]);
+      expect(exportDocx).toHaveBeenCalledWith(
+        "prop-1",
+        ["listing-1", "listing-2", "listing-3"],
+        "professional",
+      );
     });
   });
 });

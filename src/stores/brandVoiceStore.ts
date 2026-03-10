@@ -11,7 +11,7 @@ interface BrandVoiceState {
   createVoice: (
     name: string,
     description: string | null,
-    sampleListings: string[]
+    sampleListings: string[],
   ) => Promise<void>;
   deleteVoice: (id: string) => Promise<void>;
 }

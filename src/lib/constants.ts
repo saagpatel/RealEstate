@@ -10,11 +10,57 @@ export const ROUTES = {
 } as const;
 
 export const US_STATES = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL",
-  "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME",
-  "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH",
-  "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI",
-  "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+  "AL",
+  "AK",
+  "AZ",
+  "AR",
+  "CA",
+  "CO",
+  "CT",
+  "DE",
+  "DC",
+  "FL",
+  "GA",
+  "HI",
+  "ID",
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "KY",
+  "LA",
+  "ME",
+  "MD",
+  "MA",
+  "MI",
+  "MN",
+  "MS",
+  "MO",
+  "MT",
+  "NE",
+  "NV",
+  "NH",
+  "NJ",
+  "NM",
+  "NY",
+  "NC",
+  "ND",
+  "OH",
+  "OK",
+  "OR",
+  "PA",
+  "RI",
+  "SC",
+  "SD",
+  "TN",
+  "TX",
+  "UT",
+  "VT",
+  "VA",
+  "WA",
+  "WV",
+  "WI",
+  "WY",
 ] as const;
 
 export const PROPERTY_TYPES = [
@@ -27,16 +73,40 @@ export const PROPERTY_TYPES = [
 ] as const;
 
 export const LISTING_STYLES = [
-  { value: "luxury", label: "Luxury", description: "Sophisticated language for affluent buyers" },
-  { value: "family", label: "Family-Friendly", description: "Warm, inviting tone for families" },
-  { value: "investment", label: "Investment", description: "Data-driven for investors" },
-  { value: "first_time", label: "First-Time Buyer", description: "Encouraging for new buyers" },
+  {
+    value: "luxury",
+    label: "Luxury",
+    description: "Sophisticated language for affluent buyers",
+  },
+  {
+    value: "family",
+    label: "Family-Friendly",
+    description: "Warm, inviting tone for families",
+  },
+  {
+    value: "investment",
+    label: "Investment",
+    description: "Data-driven for investors",
+  },
+  {
+    value: "first_time",
+    label: "First-Time Buyer",
+    description: "Encouraging for new buyers",
+  },
 ] as const;
 
 export const LISTING_TONES = [
-  { value: "professional", label: "Professional", description: "Authoritative and polished" },
+  {
+    value: "professional",
+    label: "Professional",
+    description: "Authoritative and polished",
+  },
   { value: "warm", label: "Warm", description: "Conversational and inviting" },
-  { value: "exciting", label: "Exciting", description: "High energy, action-oriented" },
+  {
+    value: "exciting",
+    label: "Exciting",
+    description: "High energy, action-oriented",
+  },
 ] as const;
 
 export const LISTING_LENGTHS = [
@@ -45,6 +115,26 @@ export const LISTING_LENGTHS = [
   { value: "long", label: "Long", description: "400-500 words" },
 ] as const;
 
+export const AI_MODELS = [
+  {
+    value: "claude-sonnet-4-20250514",
+    label: "Claude Sonnet 4",
+    description: "Best overall quality for listings and campaign copy",
+  },
+  {
+    value: "claude-3-7-sonnet-latest",
+    label: "Claude 3.7 Sonnet",
+    description: "Balanced fallback for longer drafting sessions",
+  },
+  {
+    value: "claude-3-5-haiku-latest",
+    label: "Claude 3.5 Haiku",
+    description: "Fastest option for lightweight iterations",
+  },
+] as const;
+
+export const DEFAULT_AI_MODEL = AI_MODELS[0].value;
+
 export const SOCIAL_PLATFORMS = [
   { value: "instagram", label: "Instagram", maxChars: 2200 },
   { value: "facebook", label: "Facebook", maxChars: 63206 },
@@ -52,13 +142,44 @@ export const SOCIAL_PLATFORMS = [
 ] as const;
 
 export const EMAIL_TEMPLATES = [
-  { value: "buyer", label: "Buyer Lead", description: "Target potential buyers matching this property" },
-  { value: "seller", label: "Seller Lead", description: "Use as social proof for neighborhood sellers" },
-  { value: "open_house", label: "Open House", description: "Invite buyers to an open house event" },
+  {
+    value: "buyer",
+    label: "Buyer Lead",
+    description: "Target potential buyers matching this property",
+  },
+  {
+    value: "seller",
+    label: "Seller Lead",
+    description: "Use as social proof for neighborhood sellers",
+  },
+  {
+    value: "open_house",
+    label: "Open House",
+    description: "Invite buyers to an open house event",
+  },
+] as const;
+
+export const EXPORT_TEMPLATES = [
+  {
+    value: "professional",
+    label: "Professional",
+    description: "Balanced, polished presentation with photos included",
+  },
+  {
+    value: "luxury",
+    label: "Luxury",
+    description: "Larger headings and a more premium-feeling layout",
+  },
+  {
+    value: "minimal",
+    label: "Minimal",
+    description: "Text-first package without photo pages",
+  },
 ] as const;
 
 export const SETTING_KEYS = {
   API_KEY: "api_key",
+  AI_MODEL: "ai_model",
   AGENT_NAME: "agent_name",
   AGENT_PHONE: "agent_phone",
   AGENT_EMAIL: "agent_email",

@@ -88,15 +88,14 @@ describe("propertyStore", () => {
       expect(usePropertyStore.getState().isLoading).toBe(false);
     });
 
-    it("should handle fetch errors gracefully", async () => {
+    it("should reset loading and propagate fetch errors", async () => {
       vi.mocked(tauri.listProperties).mockRejectedValue(
-        new Error("Network error")
+        new Error("Network error"),
       );
 
       const { fetchProperties } = usePropertyStore.getState();
 
-      // Should not throw
-      await fetchProperties();
+      await expect(fetchProperties()).rejects.toThrow("Network error");
 
       const state = usePropertyStore.getState();
       expect(state.isLoading).toBe(false);

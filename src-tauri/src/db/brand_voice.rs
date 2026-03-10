@@ -81,7 +81,10 @@ mod tests {
     async fn test_create_and_get() {
         let pool = test_pool().await;
         let style = r#"{"tone":"warm","vocabulary":["stunning"]}"#;
-        let sources = vec!["Sample listing 1".to_string(), "Sample listing 2".to_string()];
+        let sources = vec![
+            "Sample listing 1".to_string(),
+            "Sample listing 2".to_string(),
+        ];
 
         let voice = create(&pool, "My Style", Some("Test voice"), style, &sources)
             .await

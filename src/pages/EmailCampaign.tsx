@@ -78,13 +78,22 @@ export function EmailCampaign() {
           templateType,
           brandVoiceId,
         },
-        channel
+        channel,
       );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
     }
-  }, [propertyId, apiKey, templateType, brandVoiceId, startGeneration, appendDelta, finishGeneration, setError]);
+  }, [
+    propertyId,
+    apiKey,
+    templateType,
+    brandVoiceId,
+    startGeneration,
+    appendDelta,
+    finishGeneration,
+    setError,
+  ]);
 
   // Reset when switching templates
   useEffect(() => {

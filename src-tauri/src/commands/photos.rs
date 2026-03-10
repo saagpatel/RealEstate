@@ -19,7 +19,10 @@ pub async fn import_photos(
             handle
                 .dialog()
                 .file()
-                .add_filter("Images", &["jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff"])
+                .add_filter(
+                    "Images",
+                    &["jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff"],
+                )
                 .set_title("Select Property Photos")
                 .blocking_pick_files()
         })
@@ -116,11 +119,9 @@ pub async fn delete_photo(
     let thumb = photo.thumbnail_path.clone();
     let _handle = app_handle; // keep alive for lifetime
 
-    tauri::async_runtime::spawn_blocking(move || {
-        manager::delete_photo_files(&original, &thumb)
-    })
-    .await
-    .map_err(|e| AppError::Photo(format!("Delete thread error: {}", e)))??;
+    tauri::async_runtime::spawn_blocking(move || manager::delete_photo_files(&original, &thumb))
+        .await
+        .map_err(|e| AppError::Photo(format!("Delete thread error: {}", e)))??;
 
     // Delete from DB
     photos::delete(&pool, &id).await

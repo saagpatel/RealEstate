@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 // Mock Tauri APIs for testing
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
+  convertFileSrc: vi.fn((path: string) => path),
   Channel: vi.fn().mockImplementation(() => ({
     onmessage: null,
     id: 0,

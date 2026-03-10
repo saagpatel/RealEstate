@@ -81,6 +81,7 @@ struct SseDelta {
     delta_type: String,
     #[serde(default)]
     text: Option<String>,
+    #[allow(dead_code)]
     #[serde(default)]
     stop_reason: Option<String>,
 }
@@ -170,7 +171,7 @@ impl ClaudeClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::from_reqwest_error(e))?;
+            .map_err(AppError::from_reqwest_error)?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -237,10 +238,7 @@ impl ClaudeClient {
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            return Err(AppError::Api(format!(
-                "API returned {}: {}",
-                status, text
-            )));
+            return Err(AppError::Api(format!("API returned {}: {}", status, text)));
         }
 
         let mut stream = response.bytes_stream();
@@ -280,9 +278,7 @@ impl ClaudeClient {
                                 if delta.delta.delta_type == "text_delta" {
                                     if let Some(text) = delta.delta.text {
                                         full_text.push_str(&text);
-                                        let _ = channel.send(StreamEvent::Delta {
-                                            text,
-                                        });
+                                        let _ = channel.send(StreamEvent::Delta { text });
                                     }
                                 }
                             }
@@ -319,12 +315,10 @@ impl ClaudeClient {
 
 /// Determine if an error is retryable (network, rate limit, overloaded)
 fn is_retryable_error(error: &AppError) -> bool {
-    match error {
-        AppError::ApiRateLimit(_) => true,
-        AppError::ApiOverloaded(_) => true,
-        AppError::NetworkError(_) => true,
-        _ => false,
-    }
+    matches!(
+        error,
+        AppError::ApiRateLimit(_) | AppError::ApiOverloaded(_) | AppError::NetworkError(_)
+    )
 }
 
 /// Calculate cost in cents: (input_tokens * 3 + output_tokens * 15) / 10000
@@ -342,9 +336,9 @@ fn parse_sse_event(block: &str) -> (String, Option<String>) {
             event_type = val.trim().to_string();
         } else if let Some(val) = line.strip_prefix("data: ") {
             data_lines.push(val.to_string());
-        } else if line.starts_with("data:") {
+        } else if let Some(stripped) = line.strip_prefix("data:") {
             // "data:" with no space after
-            data_lines.push(line[5..].to_string());
+            data_lines.push(stripped.to_string());
         }
     }
 

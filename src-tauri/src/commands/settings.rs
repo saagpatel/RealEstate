@@ -5,10 +5,7 @@ use crate::db::settings;
 use crate::error::AppError;
 
 #[tauri::command]
-pub async fn get_setting(
-    pool: State<'_, SqlitePool>,
-    key: String,
-) -> Result<String, AppError> {
+pub async fn get_setting(pool: State<'_, SqlitePool>, key: String) -> Result<String, AppError> {
     settings::get(&pool, &key).await
 }
 

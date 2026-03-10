@@ -28,12 +28,10 @@ pub fn import_photos(
     let photos_dir = app_data_dir.join("photos").join(property_id);
     let thumbs_dir = photos_dir.join("thumbs");
 
-    std::fs::create_dir_all(&photos_dir).map_err(|e| {
-        AppError::Photo(format!("Failed to create photos directory: {}", e))
-    })?;
-    std::fs::create_dir_all(&thumbs_dir).map_err(|e| {
-        AppError::Photo(format!("Failed to create thumbnails directory: {}", e))
-    })?;
+    std::fs::create_dir_all(&photos_dir)
+        .map_err(|e| AppError::Photo(format!("Failed to create photos directory: {}", e)))?;
+    std::fs::create_dir_all(&thumbs_dir)
+        .map_err(|e| AppError::Photo(format!("Failed to create thumbnails directory: {}", e)))?;
 
     let mut records = Vec::new();
 
@@ -56,9 +54,8 @@ pub fn import_photos(
         let thumb_path = thumbs_dir.join(format!("{}.jpg", id));
 
         // Copy original file
-        std::fs::copy(source, &dest_path).map_err(|e| {
-            AppError::Photo(format!("Failed to copy photo {}: {}", filename, e))
-        })?;
+        std::fs::copy(source, &dest_path)
+            .map_err(|e| AppError::Photo(format!("Failed to copy photo {}: {}", filename, e)))?;
 
         // Generate thumbnail
         create_thumbnail(&dest_path, &thumb_path).map_err(|e| {
@@ -84,38 +81,34 @@ pub fn import_photos(
 }
 
 fn create_thumbnail(source: &Path, dest: &Path) -> Result<(), AppError> {
-    let img = image::open(source).map_err(|e| {
-        AppError::Photo(format!("Failed to open image: {}", e))
-    })?;
+    let img =
+        image::open(source).map_err(|e| AppError::Photo(format!("Failed to open image: {}", e)))?;
 
     let thumb = img.resize_to_fill(THUMB_WIDTH, THUMB_HEIGHT, FilterType::Lanczos3);
 
     // Encode as JPEG with specified quality
     let mut output = std::io::BufWriter::new(
-        std::fs::File::create(dest).map_err(|e| {
-            AppError::Photo(format!("Failed to create thumbnail file: {}", e))
-        })?,
+        std::fs::File::create(dest)
+            .map_err(|e| AppError::Photo(format!("Failed to create thumbnail file: {}", e)))?,
     );
 
     let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut output, THUMB_QUALITY);
-    thumb.write_with_encoder(encoder).map_err(|e| {
-        AppError::Photo(format!("Failed to encode thumbnail: {}", e))
-    })?;
+    thumb
+        .write_with_encoder(encoder)
+        .map_err(|e| AppError::Photo(format!("Failed to encode thumbnail: {}", e)))?;
 
     Ok(())
 }
 
 pub fn delete_photo_files(original_path: &str, thumbnail_path: &str) -> Result<(), AppError> {
     if Path::new(original_path).exists() {
-        std::fs::remove_file(original_path).map_err(|e| {
-            AppError::Photo(format!("Failed to delete original photo: {}", e))
-        })?;
+        std::fs::remove_file(original_path)
+            .map_err(|e| AppError::Photo(format!("Failed to delete original photo: {}", e)))?;
     }
 
     if Path::new(thumbnail_path).exists() {
-        std::fs::remove_file(thumbnail_path).map_err(|e| {
-            AppError::Photo(format!("Failed to delete thumbnail: {}", e))
-        })?;
+        std::fs::remove_file(thumbnail_path)
+            .map_err(|e| AppError::Photo(format!("Failed to delete thumbnail: {}", e)))?;
     }
 
     Ok(())

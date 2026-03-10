@@ -1,7 +1,7 @@
 -- Phase 3 enhancements: AI model selection and analytics
 
 -- Add AI model preference setting
-INSERT INTO settings (key, value) VALUES ('ai_model', 'claude-sonnet-4-5-20250929');
+INSERT INTO settings (key, value) VALUES ('ai_model', 'claude-sonnet-4-20250514');
 
 -- Analytics tables for tracking usage and performance
 CREATE TABLE generation_analytics (

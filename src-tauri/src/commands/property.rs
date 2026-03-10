@@ -13,17 +13,12 @@ pub async fn create_property(
 }
 
 #[tauri::command]
-pub async fn get_property(
-    pool: State<'_, SqlitePool>,
-    id: String,
-) -> Result<Property, AppError> {
+pub async fn get_property(pool: State<'_, SqlitePool>, id: String) -> Result<Property, AppError> {
     properties::get(&pool, &id).await
 }
 
 #[tauri::command]
-pub async fn list_properties(
-    pool: State<'_, SqlitePool>,
-) -> Result<Vec<Property>, AppError> {
+pub async fn list_properties(pool: State<'_, SqlitePool>) -> Result<Vec<Property>, AppError> {
     properties::list_all(&pool).await
 }
 
@@ -37,9 +32,6 @@ pub async fn update_property(
 }
 
 #[tauri::command]
-pub async fn delete_property(
-    pool: State<'_, SqlitePool>,
-    id: String,
-) -> Result<(), AppError> {
+pub async fn delete_property(pool: State<'_, SqlitePool>, id: String) -> Result<(), AppError> {
     properties::delete(&pool, &id).await
 }

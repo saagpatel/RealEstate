@@ -5,7 +5,9 @@ use crate::error::AppError;
 
 use super::client::{calculate_cost_cents, ClaudeClient, StreamEvent};
 use super::listing_generator::GenerationResult;
-use super::prompts::{build_analysis_prompt, build_email_prompt, AgentInfo, MAX_TOKENS_ANALYSIS, MAX_TOKENS_EMAIL};
+use super::prompts::{
+    build_analysis_prompt, build_email_prompt, AgentInfo, MAX_TOKENS_ANALYSIS, MAX_TOKENS_EMAIL,
+};
 
 /// Two-stage email generation pipeline:
 /// 1. Analyze property (non-streaming) -> structured JSON
@@ -33,8 +35,13 @@ pub async fn generate_email(
     })?;
 
     // Stage 2: Generate email (streaming)
-    let (email_system, email_user) =
-        build_email_prompt(property, &analysis_text, template_type, brand_voice_block, agent_info);
+    let (email_system, email_user) = build_email_prompt(
+        property,
+        &analysis_text,
+        template_type,
+        brand_voice_block,
+        agent_info,
+    );
 
     let (full_text, email_input, email_output) = client
         .stream_message(&email_system, &email_user, MAX_TOKENS_EMAIL, channel)

@@ -77,7 +77,7 @@ export function SocialMedia() {
           platform,
           brandVoiceId,
         },
-        channel
+        channel,
       );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -93,7 +93,11 @@ export function SocialMedia() {
     <div className="space-y-6">
       {/* Controls */}
       <div className="bg-white rounded-lg border border-gray-200">
-        <PlatformTabs value={platform} onChange={setPlatform} disabled={isGenerating} />
+        <PlatformTabs
+          value={platform}
+          onChange={setPlatform}
+          disabled={isGenerating}
+        />
         <div className="p-4 flex items-end gap-4">
           <div className="flex-1 max-w-xs">
             <BrandVoiceSelector
@@ -165,7 +169,8 @@ export function SocialMedia() {
       {!isGenerating && !finishedText && !error && (
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center">
           <p className="text-sm text-gray-500">
-            Select a platform and click Generate to create social media posts for this property.
+            Select a platform and click Generate to create social media posts
+            for this property.
           </p>
         </div>
       )}

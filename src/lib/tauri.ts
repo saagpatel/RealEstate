@@ -5,6 +5,9 @@ import type {
   Listing,
   BrandVoice,
   Photo,
+  AnalyticsSummary,
+  CsvImportResult,
+  ExportTemplate,
 } from "./types";
 
 // Property commands
@@ -14,8 +17,7 @@ export const createProperty = (input: CreatePropertyInput) =>
 export const getProperty = (id: string) =>
   invoke<Property>("get_property", { id });
 
-export const listProperties = () =>
-  invoke<Property[]>("list_properties");
+export const listProperties = () => invoke<Property[]>("list_properties");
 
 export const updateProperty = (id: string, input: CreatePropertyInput) =>
   invoke<Property>("update_property", { id, input });
@@ -43,21 +45,22 @@ export const generateListing = (
     seoKeywords: string[];
     brandVoiceId: string | null;
   },
-  onEvent: unknown
-) =>
-  invoke<void>("generate_listing", { args, onEvent });
+  onEvent: unknown,
+) => invoke<void>("generate_listing", { args, onEvent });
 
 export const generateSocial = (
   args: { propertyId: string; platform: string; brandVoiceId: string | null },
-  onEvent: unknown
-) =>
-  invoke<void>("generate_social", { args, onEvent });
+  onEvent: unknown,
+) => invoke<void>("generate_social", { args, onEvent });
 
 export const generateEmail = (
-  args: { propertyId: string; templateType: string; brandVoiceId: string | null },
-  onEvent: unknown
-) =>
-  invoke<void>("generate_email", { args, onEvent });
+  args: {
+    propertyId: string;
+    templateType: string;
+    brandVoiceId: string | null;
+  },
+  onEvent: unknown,
+) => invoke<void>("generate_email", { args, onEvent });
 
 // Photo commands
 export const importPhotos = (propertyId: string) =>
@@ -66,8 +69,7 @@ export const importPhotos = (propertyId: string) =>
 export const listPhotos = (propertyId: string) =>
   invoke<Photo[]>("list_photos", { propertyId });
 
-export const deletePhoto = (id: string) =>
-  invoke<void>("delete_photo", { id });
+export const deletePhoto = (id: string) => invoke<void>("delete_photo", { id });
 
 export const reorderPhotos = (propertyId: string, photoIds: string[]) =>
   invoke<void>("reorder_photos", { propertyId, photoIds });
@@ -76,12 +78,15 @@ export const reorderPhotos = (propertyId: string, photoIds: string[]) =>
 export const createBrandVoice = (
   name: string,
   description: string | null,
-  sampleListings: string[]
+  sampleListings: string[],
 ) =>
-  invoke<BrandVoice>("create_brand_voice", { name, description, sampleListings });
+  invoke<BrandVoice>("create_brand_voice", {
+    name,
+    description,
+    sampleListings,
+  });
 
-export const listBrandVoices = () =>
-  invoke<BrandVoice[]>("list_brand_voices");
+export const listBrandVoices = () => invoke<BrandVoice[]>("list_brand_voices");
 
 export const deleteBrandVoice = (id: string) =>
   invoke<void>("delete_brand_voice", { id });
@@ -93,12 +98,26 @@ export const getSetting = (key: string) =>
 export const setSetting = (key: string, value: string) =>
   invoke<void>("set_setting", { key, value });
 
-// Export commands
-export const exportPdf = (propertyId: string, listingIds: string[]) =>
-  invoke<number[]>("export_pdf", { propertyId, listingIds });
+export const getAnalyticsSummary = () =>
+  invoke<AnalyticsSummary>("get_analytics_summary");
 
-export const exportDocx = (propertyId: string, listingIds: string[]) =>
-  invoke<number[]>("export_docx", { propertyId, listingIds });
+export const importPropertiesCsv = (csvData: string) =>
+  invoke<CsvImportResult>("import_properties_csv", { csvData });
+
+export const getCsvTemplate = () => invoke<string>("get_csv_template");
+
+// Export commands
+export const exportPdf = (
+  propertyId: string,
+  listingIds: string[],
+  template: ExportTemplate,
+) => invoke<number[]>("export_pdf", { propertyId, listingIds, template });
+
+export const exportDocx = (
+  propertyId: string,
+  listingIds: string[],
+  template: ExportTemplate,
+) => invoke<number[]>("export_docx", { propertyId, listingIds, template });
 
 export const copyToClipboard = (text: string) =>
   invoke<void>("copy_to_clipboard", { text });
@@ -114,5 +133,4 @@ export interface LicenseStatus {
 export const validateLicenseKey = (licenseKey: string) =>
   invoke<LicenseStatus>("validate_license_key", { licenseKey });
 
-export const checkLicense = () =>
-  invoke<LicenseStatus>("check_license");
+export const checkLicense = () => invoke<LicenseStatus>("check_license");

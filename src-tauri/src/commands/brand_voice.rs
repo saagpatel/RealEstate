@@ -24,7 +24,7 @@ pub async fn create_brand_voice(
     // Load AI model preference
     let model = settings::get(&db, "ai_model")
         .await
-        .unwrap_or_else(|_| "claude-sonnet-4-5-20250929".to_string());
+        .unwrap_or_else(|_| "claude-sonnet-4-20250514".to_string());
 
     let client = ClaudeClient::new(api_key, model);
     let extracted_style = extract_voice(&client, &sample_listings).await?;
@@ -49,9 +49,6 @@ pub async fn list_brand_voices(
 }
 
 #[tauri::command]
-pub async fn delete_brand_voice(
-    db: State<'_, SqlitePool>,
-    id: String,
-) -> Result<(), AppError> {
+pub async fn delete_brand_voice(db: State<'_, SqlitePool>, id: String) -> Result<(), AppError> {
     brand_voice::delete(&db, &id).await
 }

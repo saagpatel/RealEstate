@@ -4,11 +4,10 @@
 #[cfg(test)]
 mod tests {
     use crate::common::db_setup::create_test_db;
-    use crate::common::fixtures::PropertyBuilder;
-    use realestate_lib::db::properties::{self, CreatePropertyInput};
-    use realestate_lib::db::listings::{self, CreateListingInput};
     use realestate_lib::db::brand_voice;
+    use realestate_lib::db::listings::{self, CreateListingInput};
     use realestate_lib::db::photos;
+    use realestate_lib::db::properties::{self, CreatePropertyInput};
     use realestate_lib::db::settings;
 
     fn sample_property_input() -> CreatePropertyInput {
@@ -20,8 +19,8 @@ mod tests {
             beds: 3,
             baths: 2.5,
             sqft: 2200,
-            price: 925_000_00,
-            property_type: "Townhouse".to_string(),
+            price: 92_500_000,
+            property_type: "townhouse".to_string(),
             year_built: Some(2020),
             lot_size: Some("2500 sqft".to_string()),
             parking: Some("2-car attached".to_string()),
@@ -47,21 +46,25 @@ mod tests {
         assert!(!property.id.is_empty());
 
         // Step 2: Add photos
-        let photo1 = photos::add(
+        let photo1 = photos::insert(
             &pool,
+            "photo-front",
             &property.id,
             "front_exterior.jpg",
-            Some("thumb_front.jpg"),
+            "/tmp/front_exterior.jpg",
+            "/tmp/thumb_front.jpg",
             0,
         )
         .await
         .expect("Failed to add photo");
 
-        let photo2 = photos::add(
+        let photo2 = photos::insert(
             &pool,
+            "photo-kitchen",
             &property.id,
             "kitchen.jpg",
-            Some("thumb_kitchen.jpg"),
+            "/tmp/kitchen.jpg",
+            "/tmp/thumb_kitchen.jpg",
             1,
         )
         .await
@@ -79,18 +82,21 @@ mod tests {
             &pool,
             "Seattle Luxury Voice",
             Some("For upscale Seattle properties"),
-            Some("Sophisticated yet approachable"),
-            2,
+            "Sophisticated yet approachable",
+            &[
+                "Upscale Seattle property with strong buyer appeal".to_string(),
+                "Luxury townhome copy with neighborhood context".to_string(),
+            ],
         )
         .await
         .expect("Failed to create brand voice");
 
         // Step 5: Set API key in settings
-        settings::set(&pool, "anthropic_api_key", "sk-ant-test-integration")
+        settings::set(&pool, "api_key", "sk-ant-test-integration")
             .await
             .expect("Failed to set API key");
 
-        let api_key = settings::get(&pool, "anthropic_api_key")
+        let api_key = settings::get(&pool, "api_key")
             .await
             .expect("Failed to get API key");
 
@@ -103,9 +109,9 @@ mod tests {
                 property_id: property.id.clone(),
                 content: "This stunning townhouse in Capitol Hill features an open floor plan and rooftop deck with city views. Recently built in 2020, it offers modern finishes throughout.".to_string(),
                 generation_type: "listing".to_string(),
-                style: Some("Professional".to_string()),
-                tone: Some("Warm".to_string()),
-                length: Some("Medium".to_string()),
+                style: Some("luxury".to_string()),
+                tone: Some("warm".to_string()),
+                length: Some("medium".to_string()),
                 seo_keywords: vec!["seattle".to_string(), "townhouse".to_string(), "capitol hill".to_string()],
                 brand_voice_id: Some(voice.id.clone()),
                 tokens_used: 485,
@@ -140,14 +146,14 @@ mod tests {
 
         // Step 9: Update property
         let mut updated_input = sample_property_input();
-        updated_input.price = 950_000_00;
+        updated_input.price = 95_000_000;
         updated_input.agent_notes = Some("Price updated".to_string());
 
         let updated_property = properties::update(&pool, &property.id, updated_input)
             .await
             .expect("Failed to update property");
 
-        assert_eq!(updated_property.price, 950_000_00);
+        assert_eq!(updated_property.price, 95_000_000);
 
         // Step 10: Cleanup - delete listing first (foreign key constraint)
         listings::delete(&pool, &listing.id)
@@ -187,7 +193,7 @@ mod tests {
         for i in 0..3 {
             let mut input = sample_property_input();
             input.address = format!("{} Test Property Ln", i);
-            input.price = 800_000_00 + (i * 50_000_00);
+            input.price = 80_000_000 + (i * 5_000_000);
 
             let property = properties::create(&pool, input)
                 .await
@@ -202,8 +208,13 @@ mod tests {
                     CreateListingInput {
                         property_id: property.id.clone(),
                         content: format!("Listing {} for property {}", j, i),
-                        generation_type: if j == 0 { "listing" } else { "social" }.to_string(),
-                        style: Some("Professional".to_string()),
+                        generation_type: if j == 0 {
+                            "listing"
+                        } else {
+                            "social_instagram"
+                        }
+                        .to_string(),
+                        style: Some("luxury".to_string()),
                         tone: None,
                         length: None,
                         seo_keywords: vec![],
@@ -232,7 +243,9 @@ mod tests {
 
             assert_eq!(prop_listings.len(), 2);
             assert!(prop_listings.iter().any(|l| l.generation_type == "listing"));
-            assert!(prop_listings.iter().any(|l| l.generation_type == "social"));
+            assert!(prop_listings
+                .iter()
+                .any(|l| l.generation_type == "social_instagram"));
         }
     }
 
@@ -248,8 +261,8 @@ mod tests {
             beds: 1,
             baths: 1.0,
             sqft: 800,
-            price: 250_000_00,
-            property_type: "Studio".to_string(),
+            price: 25_000_000,
+            property_type: "condo".to_string(),
             year_built: None,
             lot_size: None,
             parking: None,
@@ -297,11 +310,13 @@ mod tests {
 
         // Add 4 photos
         for i in 0..4 {
-            photos::add(
+            photos::insert(
                 &pool,
+                &format!("photo-{}", i),
                 &property.id,
                 &format!("photo_{}.jpg", i),
-                Some(&format!("thumb_{}.jpg", i)),
+                &format!("/tmp/photo_{}.jpg", i),
+                &format!("/tmp/thumb_{}.jpg", i),
                 i as i64,
             )
             .await
@@ -315,15 +330,11 @@ mod tests {
         assert_eq!(initial_photos.len(), 4);
 
         // Reorder: reverse the order
-        let new_order: Vec<(String, i64)> = initial_photos
-            .iter()
-            .enumerate()
-            .map(|(i, photo)| (photo.id.clone(), (3 - i) as i64))
-            .collect();
-
-        photos::reorder(&pool, new_order)
-            .await
-            .expect("Failed to reorder");
+        for (index, photo) in initial_photos.iter().rev().enumerate() {
+            photos::update_sort_order(&pool, &photo.id, index as i64)
+                .await
+                .expect("Failed to reorder");
+        }
 
         let reordered = photos::list_by_property(&pool, &property.id)
             .await

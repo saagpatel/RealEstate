@@ -1,11 +1,11 @@
 // HTTP mocking utilities for testing API integrations
 
-use mockito::{Mock, Server};
+use mockito::{Mock, Server, ServerGuard};
 use serde_json::json;
 
 /// Mock API server builder for Anthropic Claude API
 pub struct MockApiServer {
-    pub server: Server,
+    pub server: ServerGuard,
 }
 
 impl MockApiServer {
@@ -92,7 +92,10 @@ data: {"type":"message_stop"}
         let status = if is_valid { "active" } else { "expired" };
 
         self.server
-            .mock("GET", mockito::Matcher::Regex(r"^/v1/licenses.*".to_string()))
+            .mock(
+                "GET",
+                mockito::Matcher::Regex(r"^/v1/licenses.*".to_string()),
+            )
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -171,6 +174,9 @@ mod tests {
     fn test_mock_url_format() {
         let api = MockApiServer::new();
         let url = api.url();
-        assert!(url.starts_with("http://"), "Mock URL should start with http://");
+        assert!(
+            url.starts_with("http://"),
+            "Mock URL should start with http://"
+        );
     }
 }

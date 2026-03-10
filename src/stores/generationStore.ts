@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import type { Listing } from "@/lib/types";
-import { listListings, toggleListingFavorite, deleteListing } from "@/lib/tauri";
+import {
+  listListings,
+  toggleListingFavorite,
+  deleteListing,
+} from "@/lib/tauri";
 
 interface GenerationState {
   isGenerating: boolean;
@@ -36,8 +40,7 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   finishGeneration: (fullText: string) =>
     set({ isGenerating: false, streamedText: fullText }),
 
-  setError: (message: string) =>
-    set({ isGenerating: false, error: message }),
+  setError: (message: string) => set({ isGenerating: false, error: message }),
 
   resetGeneration: () =>
     set({ isGenerating: false, streamedText: "", error: null }),
@@ -47,7 +50,9 @@ export const useGenerationStore = create<GenerationState>((set) => ({
     try {
       const listings = await listListings(propertyId);
       // Filter to only listing-type generations
-      set({ generations: listings.filter((l) => l.generationType === "listing") });
+      set({
+        generations: listings.filter((l) => l.generationType === "listing"),
+      });
     } catch {
       // Silently fail — history is non-critical
     } finally {
@@ -59,7 +64,7 @@ export const useGenerationStore = create<GenerationState>((set) => ({
     await toggleListingFavorite(id);
     set((state) => ({
       generations: state.generations.map((g) =>
-        g.id === id ? { ...g, isFavorite: !g.isFavorite } : g
+        g.id === id ? { ...g, isFavorite: !g.isFavorite } : g,
       ),
     }));
   },

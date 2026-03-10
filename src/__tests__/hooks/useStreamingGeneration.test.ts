@@ -6,7 +6,6 @@ import { generateListing } from "@/lib/tauri";
 import { useGenerationStore } from "@/stores/generationStore";
 
 vi.mock("@/lib/tauri");
-vi.mock("@tauri-apps/api/core");
 
 describe("useStreamingGeneration", () => {
   beforeEach(() => {
@@ -31,7 +30,7 @@ describe("useStreamingGeneration", () => {
   it("should start generation and set isGenerating", async () => {
     let channelInstance: any;
 
-    vi.mocked(Channel).mockImplementation(() => {
+    vi.mocked(Channel).mockImplementation(function () {
       channelInstance = {
         onmessage: null,
         id: 0,
@@ -41,7 +40,7 @@ describe("useStreamingGeneration", () => {
         },
       };
       return channelInstance;
-    });
+    } as any);
 
     vi.mocked(generateListing).mockImplementation(async (params, channel) => {
       // Simulate started event
@@ -69,7 +68,7 @@ describe("useStreamingGeneration", () => {
   it("should handle delta events and append text", async () => {
     let channelInstance: any;
 
-    vi.mocked(Channel).mockImplementation(() => {
+    vi.mocked(Channel).mockImplementation(function () {
       channelInstance = {
         onmessage: null,
         id: 0,
@@ -79,7 +78,7 @@ describe("useStreamingGeneration", () => {
         },
       };
       return channelInstance;
-    });
+    } as any);
 
     vi.mocked(generateListing).mockImplementation(async (params, channel) => {
       if (channel.onmessage) {
@@ -110,7 +109,7 @@ describe("useStreamingGeneration", () => {
   it("should handle finished event", async () => {
     let channelInstance: any;
 
-    vi.mocked(Channel).mockImplementation(() => {
+    vi.mocked(Channel).mockImplementation(function () {
       channelInstance = {
         onmessage: null,
         id: 0,
@@ -120,7 +119,7 @@ describe("useStreamingGeneration", () => {
         },
       };
       return channelInstance;
-    });
+    } as any);
 
     vi.mocked(generateListing).mockImplementation(async (params, channel) => {
       if (channel.onmessage) {
@@ -153,7 +152,7 @@ describe("useStreamingGeneration", () => {
   it("should handle error events", async () => {
     let channelInstance: any;
 
-    vi.mocked(Channel).mockImplementation(() => {
+    vi.mocked(Channel).mockImplementation(function () {
       channelInstance = {
         onmessage: null,
         id: 0,
@@ -163,7 +162,7 @@ describe("useStreamingGeneration", () => {
         },
       };
       return channelInstance;
-    });
+    } as any);
 
     vi.mocked(generateListing).mockImplementation(async (params, channel) => {
       if (channel.onmessage) {
@@ -194,17 +193,19 @@ describe("useStreamingGeneration", () => {
   });
 
   it("should handle generateListing errors", async () => {
-    vi.mocked(Channel).mockImplementation(() => ({
-      onmessage: null,
-      id: 0,
-      __TAURI_CHANNEL_MARKER__: true,
-      toJSON() {
-        return `__CHANNEL__:${this.id}`;
-      },
-    }));
+    vi.mocked(Channel).mockImplementation(function () {
+      return {
+        onmessage: null,
+        id: 0,
+        __TAURI_CHANNEL_MARKER__: true,
+        toJSON() {
+          return `__CHANNEL__:${this.id}`;
+        },
+      };
+    } as any);
 
     vi.mocked(generateListing).mockRejectedValue(
-      new Error("Network connection failed")
+      new Error("Network connection failed"),
     );
 
     const { result } = renderHook(() => useStreamingGeneration());
@@ -226,14 +227,16 @@ describe("useStreamingGeneration", () => {
   });
 
   it("should pass all parameters to generateListing", async () => {
-    vi.mocked(Channel).mockImplementation(() => ({
-      onmessage: null,
-      id: 0,
-      __TAURI_CHANNEL_MARKER__: true,
-      toJSON() {
-        return `__CHANNEL__:${this.id}`;
-      },
-    }));
+    vi.mocked(Channel).mockImplementation(function () {
+      return {
+        onmessage: null,
+        id: 0,
+        __TAURI_CHANNEL_MARKER__: true,
+        toJSON() {
+          return `__CHANNEL__:${this.id}`;
+        },
+      };
+    } as any);
 
     vi.mocked(generateListing).mockResolvedValue();
 
@@ -259,7 +262,7 @@ describe("useStreamingGeneration", () => {
         seoKeywords: ["downtown", "modern"],
         brandVoiceId: "voice-456",
       }),
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 });

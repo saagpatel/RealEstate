@@ -1,8 +1,5 @@
 // Test data builders (fixtures) for creating test entities
 
-use chrono::Utc;
-use serde_json::json;
-
 /// Builder for creating test Property instances
 #[derive(Debug, Clone)]
 pub struct PropertyBuilder {
@@ -36,15 +33,12 @@ impl PropertyBuilder {
             beds: 3,
             baths: 2,
             sqft: Some(2500),
-            price: 850_000_00,  // Price in cents
-            property_type: "House".to_string(),
+            price: 85_000_000, // Price in cents
+            property_type: "single_family".to_string(),
             year_built: Some(2010),
             lot_size: Some("5000 sqft".to_string()),
             parking: Some("2-car garage".to_string()),
-            key_features: vec![
-                "Updated kitchen".to_string(),
-                "Hardwood floors".to_string(),
-            ],
+            key_features: vec!["Updated kitchen".to_string(), "Hardwood floors".to_string()],
             highlights: vec!["New roof".to_string()],
             amenities: vec!["Fireplace".to_string(), "Deck".to_string()],
         }
@@ -240,7 +234,9 @@ impl BrandVoiceBuilder {
             id: 1,
             name: "Luxury Voice".to_string(),
             description: Some("For upscale properties".to_string()),
-            extracted_style: Some("Sophisticated and elegant tone with emphasis on premium features".to_string()),
+            extracted_style: Some(
+                "Sophisticated and elegant tone with emphasis on premium features".to_string(),
+            ),
             source_listings: vec![
                 "Sample listing 1 with luxury language".to_string(),
                 "Sample listing 2 with upscale terminology".to_string(),
@@ -293,11 +289,11 @@ mod tests {
     fn test_property_builder_with_methods() {
         let property = PropertyBuilder::new()
             .with_address("456 Oak Ave")
-            .with_price(950_000_00)
+            .with_price(95_000_000)
             .with_beds(4);
 
         assert_eq!(property.address, "456 Oak Ave");
-        assert_eq!(property.price, 950_000_00);
+        assert_eq!(property.price, 95_000_000);
         assert_eq!(property.beds, 4);
     }
 

@@ -10,6 +10,7 @@ use super::prompts::{
     GenerationOptions, MAX_TOKENS_ANALYSIS,
 };
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct PropertyAnalysis {
     pub selling_points: Vec<String>,
@@ -19,6 +20,7 @@ pub struct PropertyAnalysis {
     pub emotional_hooks: Vec<String>,
 }
 
+#[allow(dead_code)]
 pub struct GenerationResult {
     pub full_text: String,
     pub input_tokens: u32,
@@ -53,8 +55,13 @@ pub async fn generate_listing(
     })?;
 
     // Stage 2: Generate listing (streaming)
-    let (listing_system, listing_user) =
-        build_listing_prompt(property, &analysis_text, options, brand_voice_block, agent_info);
+    let (listing_system, listing_user) = build_listing_prompt(
+        property,
+        &analysis_text,
+        options,
+        brand_voice_block,
+        agent_info,
+    );
 
     let max_tokens = max_tokens_for_listing(&options.length);
 

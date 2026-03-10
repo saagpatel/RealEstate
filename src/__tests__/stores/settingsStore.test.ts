@@ -11,6 +11,7 @@ describe("settingsStore", () => {
     // Reset store state
     useSettingsStore.setState({
       apiKey: "",
+      aiModel: "claude-sonnet-4-20250514",
       agentName: "",
       agentPhone: "",
       agentEmail: "",
@@ -25,6 +26,7 @@ describe("settingsStore", () => {
   it("should initialize with default values", () => {
     const store = useSettingsStore.getState();
     expect(store.apiKey).toBe("");
+    expect(store.aiModel).toBe("claude-sonnet-4-20250514");
     expect(store.agentName).toBe("");
     expect(store.agentPhone).toBe("");
     expect(store.agentEmail).toBe("");
@@ -39,12 +41,13 @@ describe("settingsStore", () => {
     it("should load all settings from backend", async () => {
       const mockSettings = {
         [SETTING_KEYS.API_KEY]: "sk-ant-test-123",
+        [SETTING_KEYS.AI_MODEL]: "claude-3-5-haiku-latest",
         [SETTING_KEYS.AGENT_NAME]: "John Doe",
         [SETTING_KEYS.AGENT_PHONE]: "555-1234",
         [SETTING_KEYS.AGENT_EMAIL]: "john@example.com",
         [SETTING_KEYS.BROKERAGE_NAME]: "Realty Co",
-        [SETTING_KEYS.DEFAULT_STYLE]: "professional",
-        [SETTING_KEYS.DEFAULT_TONE]: "friendly",
+        [SETTING_KEYS.DEFAULT_STYLE]: "family",
+        [SETTING_KEYS.DEFAULT_TONE]: "warm",
         [SETTING_KEYS.DEFAULT_LENGTH]: "short",
       };
 
@@ -57,12 +60,13 @@ describe("settingsStore", () => {
 
       const state = useSettingsStore.getState();
       expect(state.apiKey).toBe("sk-ant-test-123");
+      expect(state.aiModel).toBe("claude-3-5-haiku-latest");
       expect(state.agentName).toBe("John Doe");
       expect(state.agentPhone).toBe("555-1234");
       expect(state.agentEmail).toBe("john@example.com");
       expect(state.brokerageName).toBe("Realty Co");
-      expect(state.defaultStyle).toBe("professional");
-      expect(state.defaultTone).toBe("friendly");
+      expect(state.defaultStyle).toBe("family");
+      expect(state.defaultTone).toBe("warm");
       expect(state.defaultLength).toBe("short");
       expect(state.isLoaded).toBe(true);
     });
@@ -75,6 +79,7 @@ describe("settingsStore", () => {
 
       const state = useSettingsStore.getState();
       expect(state.apiKey).toBe("");
+      expect(state.aiModel).toBe("claude-sonnet-4-20250514");
       expect(state.agentName).toBe("");
       expect(state.isLoaded).toBe(true);
     });
@@ -110,11 +115,21 @@ describe("settingsStore", () => {
 
       expect(setSetting).toHaveBeenCalledWith(
         SETTING_KEYS.API_KEY,
-        "sk-ant-new-key"
+        "sk-ant-new-key",
       );
 
       const state = useSettingsStore.getState();
       expect(state.apiKey).toBe("sk-ant-new-key");
+    });
+
+    it("should save AI model setting", async () => {
+      vi.mocked(setSetting).mockResolvedValue();
+
+      const { saveSetting } = useSettingsStore.getState();
+      await saveSetting(SETTING_KEYS.AI_MODEL, "claude-3-5-haiku-latest");
+
+      const state = useSettingsStore.getState();
+      expect(state.aiModel).toBe("claude-3-5-haiku-latest");
     });
 
     it("should save agent name setting", async () => {
@@ -125,7 +140,7 @@ describe("settingsStore", () => {
 
       expect(setSetting).toHaveBeenCalledWith(
         SETTING_KEYS.AGENT_NAME,
-        "Alice Johnson"
+        "Alice Johnson",
       );
 
       const state = useSettingsStore.getState();

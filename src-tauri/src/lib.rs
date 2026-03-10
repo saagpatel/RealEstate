@@ -1,6 +1,7 @@
 mod ai;
 mod commands;
-mod db;
+#[doc(hidden)]
+pub mod db;
 mod error;
 mod export;
 mod import;
@@ -9,8 +10,8 @@ mod photos;
 
 use commands::{
     analytics as analytics_commands, brand_voice as brand_voice_commands,
-    export as export_commands, generate, import as import_commands,
-    license as license_commands, photos as photo_commands, property, settings,
+    export as export_commands, generate, import as import_commands, license as license_commands,
+    photos as photo_commands, property, settings,
 };
 use tauri::Manager;
 
@@ -29,10 +30,8 @@ pub fn run() {
 
             let db_path = app_data_dir.join("realestate.db");
 
-            let pool = tauri::async_runtime::block_on(async {
-                db::init_pool(&db_path).await
-            })
-            .map_err(|e| format!("Failed to initialize database: {}", e))?;
+            let pool = tauri::async_runtime::block_on(async { db::init_pool(&db_path).await })
+                .map_err(|e| format!("Failed to initialize database: {}", e))?;
 
             app.manage(pool);
             Ok(())

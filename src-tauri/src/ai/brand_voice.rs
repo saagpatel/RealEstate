@@ -27,10 +27,7 @@ pub async fn extract_voice(
             .strip_prefix("```json")
             .or_else(|| trimmed.strip_prefix("```"))
             .unwrap_or(trimmed);
-        inner
-            .strip_suffix("```")
-            .unwrap_or(inner)
-            .trim()
+        inner.strip_suffix("```").unwrap_or(inner).trim()
     } else {
         trimmed
     };
@@ -55,7 +52,7 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         let client = ClaudeClient::new(
             "fake-key".to_string(),
-            "claude-sonnet-4-5-20250929".to_string(),
+            "claude-sonnet-4-20250514".to_string(),
         );
         let result = rt.block_on(extract_voice(&client, &["single".to_string()]));
         assert!(result.is_err());

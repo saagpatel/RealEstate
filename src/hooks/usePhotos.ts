@@ -6,6 +6,7 @@ interface UsePhotosReturn {
   photos: Photo[];
   isLoading: boolean;
   isImporting: boolean;
+  isReordering: boolean;
   error: string | null;
   loadPhotos: () => Promise<void>;
   importPhotos: () => Promise<void>;
@@ -17,6 +18,7 @@ export function usePhotos(propertyId: string | undefined): UsePhotosReturn {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadPhotos = useCallback(async () => {
@@ -53,25 +55,23 @@ export function usePhotos(propertyId: string | undefined): UsePhotosReturn {
     }
   }, [propertyId]);
 
-  const deletePhoto = useCallback(
-    async (id: string) => {
-      setError(null);
-      try {
-        await tauri.deletePhoto(id);
-        setPhotos((prev) => prev.filter((p) => p.id !== id));
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to delete photo";
-        setError(message);
-      }
-    },
-    []
-  );
+  const deletePhoto = useCallback(async (id: string) => {
+    setError(null);
+    try {
+      await tauri.deletePhoto(id);
+      setPhotos((prev) => prev.filter((p) => p.id !== id));
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete photo";
+      setError(message);
+    }
+  }, []);
 
   const reorderPhotos = useCallback(
     async (photoIds: string[]) => {
       if (!propertyId) return;
       setError(null);
+      setIsReordering(true);
 
       // Optimistic update
       const reordered = photoIds
@@ -88,9 +88,11 @@ export function usePhotos(propertyId: string | undefined): UsePhotosReturn {
         setError(message);
         // Reload on failure to restore correct order
         await loadPhotos();
+      } finally {
+        setIsReordering(false);
       }
     },
-    [propertyId, photos, loadPhotos]
+    [propertyId, photos, loadPhotos],
   );
 
   useEffect(() => {
@@ -101,6 +103,7 @@ export function usePhotos(propertyId: string | undefined): UsePhotosReturn {
     photos,
     isLoading,
     isImporting,
+    isReordering,
     error,
     loadPhotos,
     importPhotos,

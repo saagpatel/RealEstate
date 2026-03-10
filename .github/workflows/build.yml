@@ -3,20 +3,91 @@ name: Build & Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v1.0.0)'
+        description: "Version to release (e.g., v1.0.0)"
         required: true
         type: string
 
+permissions:
+  contents: write
+
 env:
   RUST_BACKTRACE: 1
+  RELEASE_VERSION: ${{ github.event.inputs.version || github.ref_name }}
 
 jobs:
+  validate-release-tag:
+    name: Validate Release Version
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate requested version
+        env:
+          RAW_VERSION: ${{ env.RELEASE_VERSION }}
+        run: |
+          VERSION="${RAW_VERSION#refs/tags/}"
+
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release version must match vMAJOR.MINOR.PATCH: $VERSION"
+            exit 1
+          fi
+
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          CARGO_VERSION=$(awk -F ' = ' '/^version = / { gsub(/\"/, \"\", $2); print $2; exit }' src-tauri/Cargo.toml)
+          TAURI_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          EXPECTED="${VERSION#v}"
+
+          test "$PACKAGE_VERSION" = "$EXPECTED"
+          test "$CARGO_VERSION" = "$EXPECTED"
+          test "$TAURI_VERSION" = "$EXPECTED"
+
+  verify-release:
+    name: Release Verify
+    needs: validate-release-tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libgdk-pixbuf2.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run canonical verify suite
+        run: pnpm verify
+
   build:
     name: Build ${{ matrix.platform }}
+    needs: verify-release
     strategy:
       fail-fast: false
       matrix:
@@ -24,15 +95,19 @@ jobs:
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             artifact: realestate_amd64.AppImage
+            smoke_suffixes: .AppImage,.deb
           - platform: macos-latest
             target: x86_64-apple-darwin
             artifact: RealEstate_x64.app.tar.gz
+            smoke_suffixes: .app.tar.gz,.dmg
           - platform: macos-latest
             target: aarch64-apple-darwin
             artifact: RealEstate_aarch64.app.tar.gz
+            smoke_suffixes: .app.tar.gz,.dmg
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             artifact: RealEstate_x64_setup.exe
+            smoke_suffixes: .exe,.msi
 
     runs-on: ${{ matrix.platform }}
 
@@ -62,12 +137,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10.31.0
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -105,12 +180,13 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'RealEstate Listing Optimizer ${{ github.ref_name }}'
-          releaseBody: 'See CHANGELOG.md for details'
-          releaseDraft: true
-          prerelease: false
           args: --target ${{ matrix.target }}
+
+      - name: Smoke-check bundled artifacts
+        run: |
+          bash scripts/release/check-bundle-artifacts.sh \
+            "src-tauri/target/${{ matrix.target }}/release/bundle" \
+            "${{ matrix.smoke_suffixes }}"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -118,6 +194,7 @@ jobs:
           name: ${{ matrix.platform }}-${{ matrix.target }}
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*
+          if-no-files-found: error
           retention-days: 7
 
   create-release:
@@ -137,13 +214,19 @@ jobs:
       - name: Create release notes
         id: changelog
         run: |
+          VERSION="${{ env.RELEASE_VERSION }}"
+          VERSION_NO_PREFIX="${VERSION#v}"
+
           if [ -f "CHANGELOG.md" ]; then
-            # Extract changelog for this version
-            VERSION="${GITHUB_REF#refs/tags/}"
-            awk "/## \[${VERSION}\]/,/## \[/" CHANGELOG.md | sed '1d;$d' > RELEASE_NOTES.md
-          else
+            awk "/## \[${VERSION_NO_PREFIX}\]/,/## \[/" CHANGELOG.md | sed '1d;$d' > RELEASE_NOTES.md
+          fi
+
+          if [ ! -s "RELEASE_NOTES.md" ]; then
             echo "Release $VERSION" > RELEASE_NOTES.md
           fi
+
+      - name: Generate checksums
+        run: bash scripts/release/generate-checksums.sh artifacts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -156,5 +239,6 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.msi
             artifacts/**/*.dmg
+            artifacts/**/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

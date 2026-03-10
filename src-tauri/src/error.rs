@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+#[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("Database error: {0}")]
@@ -8,16 +9,22 @@ pub enum AppError {
     #[error("API key is missing or invalid. Please set your Anthropic API key in Settings (must start with 'sk-ant-').")]
     MissingApiKey,
 
-    #[error("API rate limit exceeded. Please wait a few minutes before generating again. Error: {0}")]
+    #[error(
+        "API rate limit exceeded. Please wait a few minutes before generating again. Error: {0}"
+    )]
     ApiRateLimit(String),
 
-    #[error("Anthropic API is currently overloaded. Please wait a moment and try again. Error: {0}")]
+    #[error(
+        "Anthropic API is currently overloaded. Please wait a moment and try again. Error: {0}"
+    )]
     ApiOverloaded(String),
 
     #[error("Failed to connect to Anthropic API. Please check your internet connection and try again. Error: {0}")]
     ApiConnectionError(String),
 
-    #[error("Network error occurred. Please check your internet connection and try again. Error: {0}")]
+    #[error(
+        "Network error occurred. Please check your internet connection and try again. Error: {0}"
+    )]
     NetworkError(String),
 
     #[error("API request failed: {0}")]
@@ -32,10 +39,14 @@ pub enum AppError {
     #[error("Brand voice not found (ID: {0}). It may have been deleted.")]
     BrandVoiceNotFound(String),
 
-    #[error("License key is invalid or expired. Please purchase or renew at https://lemonsqueezy.com")]
+    #[error(
+        "License key is invalid or expired. Please purchase or renew at https://lemonsqueezy.com"
+    )]
     InvalidLicense,
 
-    #[error("Failed to validate license key. Please check your internet connection or try again later.")]
+    #[error(
+        "Failed to validate license key. Please check your internet connection or try again later."
+    )]
     LicenseValidationFailed,
 
     #[error("IO error: {0}")]
@@ -84,6 +95,7 @@ pub enum AppError {
     RequestFailed(String),
 }
 
+#[allow(dead_code)]
 impl AppError {
     /// Convert from reqwest::Error with context
     pub fn from_reqwest_error(err: reqwest::Error) -> Self {

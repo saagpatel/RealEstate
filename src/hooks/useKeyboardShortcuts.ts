@@ -14,7 +14,11 @@ export function useKeyboardShortcuts() {
       if (e.key === "n" && !e.shiftKey) {
         // Don't hijack if user is typing in an input
         const target = e.target as HTMLElement;
-        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        if (
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable
+        ) {
           return;
         }
         e.preventDefault();
@@ -32,7 +36,7 @@ export function useKeyboardShortcuts() {
         if (isOnGenerationPage) {
           // Find and click the generate button
           const btn = document.querySelector<HTMLButtonElement>(
-            'button:not(:disabled)[class*="bg-blue-600"]'
+            'button:not(:disabled)[class*="bg-blue-600"]',
           );
           if (btn) {
             e.preventDefault();

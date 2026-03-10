@@ -1,7 +1,6 @@
 // Database test utilities
 
-use sqlx::{sqlite::SqlitePool, sqlite::SqlitePoolOptions, Row};
-use std::sync::Arc;
+use sqlx::{sqlite::SqlitePool, sqlite::SqlitePoolOptions};
 
 /// Creates an in-memory SQLite database with migrations applied
 /// Each test gets a fresh database to prevent test interference
@@ -14,9 +13,7 @@ pub async fn create_test_db() -> Result<SqlitePool, sqlx::Error> {
         .await?;
 
     // Run migrations from src-tauri/migrations/
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await?;
+    sqlx::migrate!("./migrations").run(&pool).await?;
 
     Ok(pool)
 }
@@ -54,14 +51,24 @@ mod tests {
         let pool = create_test_db().await.expect("Failed to create test DB");
 
         // Verify all 5 tables were created by migrations
-        let tables = vec!["properties", "photos", "brand_voices", "listings", "settings"];
+        let tables = vec![
+            "properties",
+            "photos",
+            "brand_voices",
+            "listings",
+            "settings",
+        ];
 
         for table in tables {
             let result = sqlx::query(&format!("SELECT COUNT(*) FROM {}", table))
                 .fetch_one(&pool)
                 .await;
 
-            assert!(result.is_ok(), "Table {} should exist after migrations", table);
+            assert!(
+                result.is_ok(),
+                "Table {} should exist after migrations",
+                table
+            );
         }
     }
 

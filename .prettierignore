@@ -1,0 +1,7 @@
+.perf-results
+dist
+node_modules
+pnpm-lock.yaml
+src-tauri/gen
+src-tauri/target
+AGENTS.md

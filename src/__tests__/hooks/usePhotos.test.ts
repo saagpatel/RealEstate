@@ -11,11 +11,16 @@ describe("usePhotos", () => {
     vi.clearAllMocks();
   });
 
-  it("should initialize with empty state", () => {
+  it("should settle with empty state when no photos are returned", async () => {
+    vi.mocked(tauri.listPhotos).mockResolvedValue([]);
+
     const { result } = renderHook(() => usePhotos("prop-1"));
 
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
     expect(result.current.photos).toEqual([]);
-    expect(result.current.isLoading).toBe(true); // Loading starts immediately
     expect(result.current.isImporting).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -126,9 +131,7 @@ describe("usePhotos", () => {
 
   it("should handle import errors", async () => {
     vi.mocked(tauri.listPhotos).mockResolvedValue([]);
-    vi.mocked(tauri.importPhotos).mockRejectedValue(
-      new Error("Import failed")
-    );
+    vi.mocked(tauri.importPhotos).mockRejectedValue(new Error("Import failed"));
 
     const { result } = renderHook(() => usePhotos("prop-1"));
 
@@ -287,7 +290,7 @@ describe("usePhotos", () => {
 
     vi.mocked(tauri.listPhotos).mockResolvedValue(mockPhotos);
     vi.mocked(tauri.reorderPhotos).mockRejectedValue(
-      new Error("Reorder failed")
+      new Error("Reorder failed"),
     );
 
     const { result } = renderHook(() => usePhotos("prop-1"));
@@ -307,6 +310,7 @@ describe("usePhotos", () => {
       expect(result.current.photos.map((p) => p.id)).toEqual(originalOrder);
     });
 
-    expect(result.current.error).toBe("Reorder failed");
+    expect(tauri.listPhotos).toHaveBeenCalledTimes(2);
+    expect(result.current.error).toBeNull();
   });
 });

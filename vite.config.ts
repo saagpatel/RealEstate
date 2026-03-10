@@ -3,11 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
-// @ts-expect-error process is a nodejs global
 const viteCacheDir = process.env.VITE_CACHE_DIR;
-// @ts-expect-error process is a nodejs global
 const viteDevPort = Number(process.env.VITE_DEV_PORT || "1420");
 
 // https://vite.dev/config/

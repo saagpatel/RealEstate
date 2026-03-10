@@ -114,16 +114,15 @@ describe("brandVoiceStore", () => {
       vi.mocked(api.listBrandVoices).mockResolvedValue([newVoice]);
 
       const { createVoice } = useBrandVoiceStore.getState();
-      await createVoice(
-        "Modern Voice",
-        "For contemporary homes",
-        ["Sample 1", "Sample 2"]
-      );
+      await createVoice("Modern Voice", "For contemporary homes", [
+        "Sample 1",
+        "Sample 2",
+      ]);
 
       expect(api.createBrandVoice).toHaveBeenCalledWith(
         "Modern Voice",
         "For contemporary homes",
-        ["Sample 1", "Sample 2"]
+        ["Sample 1", "Sample 2"],
       );
       expect(api.listBrandVoices).toHaveBeenCalledTimes(1);
 
@@ -162,9 +161,9 @@ describe("brandVoiceStore", () => {
 
       const { createVoice } = useBrandVoiceStore.getState();
 
-      await expect(
-        createVoice("Test", null, ["Sample"])
-      ).rejects.toThrow("Creation failed");
+      await expect(createVoice("Test", null, ["Sample"])).rejects.toThrow(
+        "Creation failed",
+      );
 
       const state = useBrandVoiceStore.getState();
       expect(state.isCreating).toBe(false);

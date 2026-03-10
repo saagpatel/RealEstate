@@ -4,8 +4,10 @@ use crate::db::properties::Property;
 use crate::error::AppError;
 
 use super::client::{calculate_cost_cents, ClaudeClient, StreamEvent};
-use super::prompts::{build_analysis_prompt, build_social_prompt, AgentInfo, MAX_TOKENS_ANALYSIS, MAX_TOKENS_SOCIAL};
 use super::listing_generator::{GenerationResult, PropertyAnalysis};
+use super::prompts::{
+    build_analysis_prompt, build_social_prompt, AgentInfo, MAX_TOKENS_ANALYSIS, MAX_TOKENS_SOCIAL,
+};
 
 /// Two-stage social media post generation pipeline:
 /// 1. Analyze property (non-streaming) -> structured JSON
@@ -33,8 +35,13 @@ pub async fn generate_social_posts(
     })?;
 
     // Stage 2: Generate social posts (streaming)
-    let (social_system, social_user) =
-        build_social_prompt(property, &analysis_text, platform, brand_voice_block, agent_info);
+    let (social_system, social_user) = build_social_prompt(
+        property,
+        &analysis_text,
+        platform,
+        brand_voice_block,
+        agent_info,
+    );
 
     let (full_text, social_input, social_output) = client
         .stream_message(&social_system, &social_user, MAX_TOKENS_SOCIAL, channel)

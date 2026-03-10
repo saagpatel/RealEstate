@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useGenerationStore } from "@/stores/generationStore";
-import { listListings, toggleListingFavorite, deleteListing } from "@/lib/tauri";
+import {
+  listListings,
+  toggleListingFavorite,
+  deleteListing,
+} from "@/lib/tauri";
 import type { Listing } from "@/lib/types";
 
 vi.mock("@/lib/tauri");

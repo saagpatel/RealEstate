@@ -2,7 +2,12 @@ import { useCallback } from "react";
 import { Channel } from "@tauri-apps/api/core";
 import { generateListing } from "@/lib/tauri";
 import { useGenerationStore } from "@/stores/generationStore";
-import type { StreamEvent, ListingStyle, ListingTone, ListingLength } from "@/lib/types";
+import type {
+  StreamEvent,
+  ListingStyle,
+  ListingTone,
+  ListingLength,
+} from "@/lib/types";
 
 interface GenerateListingParams {
   propertyId: string;
@@ -55,15 +60,14 @@ export function useStreamingGeneration() {
             seoKeywords: params.seoKeywords,
             brandVoiceId: params.brandVoiceId,
           },
-          channel
+          channel,
         );
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : String(err);
+        const message = err instanceof Error ? err.message : String(err);
         setError(message);
       }
     },
-    [startGeneration, appendDelta, finishGeneration, setError, loadGenerations]
+    [startGeneration, appendDelta, finishGeneration, setError, loadGenerations],
   );
 
   return { generate, isGenerating, streamedText, error };

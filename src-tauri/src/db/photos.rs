@@ -139,8 +139,12 @@ mod tests {
         .await
         .unwrap();
 
-        insert(&pool, "p1", "prop1", "a.jpg", "/a", "/ta", 1).await.unwrap();
-        insert(&pool, "p2", "prop1", "b.jpg", "/b", "/tb", 0).await.unwrap();
+        insert(&pool, "p1", "prop1", "a.jpg", "/a", "/ta", 1)
+            .await
+            .unwrap();
+        insert(&pool, "p2", "prop1", "b.jpg", "/b", "/tb", 0)
+            .await
+            .unwrap();
 
         let photos = list_by_property(&pool, "prop1").await.unwrap();
         assert_eq!(photos.len(), 2);
@@ -161,7 +165,9 @@ mod tests {
         .await
         .unwrap();
 
-        insert(&pool, "p1", "prop1", "a.jpg", "/a", "/ta", 0).await.unwrap();
+        insert(&pool, "p1", "prop1", "a.jpg", "/a", "/ta", 0)
+            .await
+            .unwrap();
         delete(&pool, "p1").await.unwrap();
 
         let result = get(&pool, "p1").await;
@@ -180,7 +186,9 @@ mod tests {
         .await
         .unwrap();
 
-        insert(&pool, "p1", "prop1", "a.jpg", "/a", "/ta", 0).await.unwrap();
+        insert(&pool, "p1", "prop1", "a.jpg", "/a", "/ta", 0)
+            .await
+            .unwrap();
         update_sort_order(&pool, "p1", 5).await.unwrap();
 
         let photo = get(&pool, "p1").await.unwrap();

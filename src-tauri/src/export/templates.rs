@@ -18,9 +18,10 @@ impl ExportTemplate {
 }
 
 /// Template configuration for styling exports
+#[allow(dead_code)]
 pub struct TemplateConfig {
-    pub primary_color: (u8, u8, u8),    // RGB
-    pub secondary_color: (u8, u8, u8),  // RGB
+    pub primary_color: (u8, u8, u8),   // RGB
+    pub secondary_color: (u8, u8, u8), // RGB
     pub header_font_size: u8,
     pub body_font_size: u8,
     pub include_photos: bool,
@@ -28,6 +29,7 @@ pub struct TemplateConfig {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum PhotoLayout {
     Grid,      // Multiple photos in grid
     Featured,  // One large photo at top
@@ -46,8 +48,8 @@ impl ExportTemplate {
                 photo_layout: PhotoLayout::Grid,
             },
             ExportTemplate::Luxury => TemplateConfig {
-                primary_color: (139, 115, 85),    // Gold/Bronze
-                secondary_color: (64, 64, 64),    // Charcoal
+                primary_color: (139, 115, 85), // Gold/Bronze
+                secondary_color: (64, 64, 64), // Charcoal
                 header_font_size: 22,
                 body_font_size: 12,
                 include_photos: true,

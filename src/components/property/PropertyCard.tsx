@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { Home, Bed, Bath, Ruler, Trash2 } from "lucide-react";
 import type { Property } from "@/lib/types";
 import { PROPERTY_TYPES } from "@/lib/constants";
 
 interface PropertyCardProps {
   property: Property;
+  primaryPhotoPath?: string | null;
   onDelete: (id: string) => void;
 }
 
@@ -20,7 +22,11 @@ function formatNumber(n: number): string {
   return new Intl.NumberFormat("en-US").format(n);
 }
 
-export function PropertyCard({ property, onDelete }: PropertyCardProps) {
+export function PropertyCard({
+  property,
+  primaryPhotoPath = null,
+  onDelete,
+}: PropertyCardProps) {
   const navigate = useNavigate();
   const typeLabel =
     PROPERTY_TYPES.find((t) => t.value === property.propertyType)?.label ??
@@ -31,9 +37,19 @@ export function PropertyCard({ property, onDelete }: PropertyCardProps) {
       onClick={() => navigate(`/property/${property.id}`)}
       className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
     >
-      {/* Placeholder image area */}
-      <div className="h-40 bg-gray-100 flex items-center justify-center">
-        <Home size={36} className="text-gray-300" />
+      <div className="h-40 bg-gray-100">
+        {primaryPhotoPath ? (
+          <img
+            src={convertFileSrc(primaryPhotoPath)}
+            alt={`${property.address} primary`}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Home size={36} className="text-gray-300" />
+          </div>
+        )}
       </div>
 
       <div className="p-4">

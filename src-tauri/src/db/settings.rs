@@ -49,9 +49,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_creates_new_key() {
         let pool = test_pool().await;
-        set(&pool, "custom_setting", "custom_value")
-            .await
-            .unwrap();
+        set(&pool, "custom_setting", "custom_value").await.unwrap();
 
         let value = get(&pool, "custom_setting").await.unwrap();
         assert_eq!(value, "custom_value");

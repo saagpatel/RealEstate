@@ -1,51 +1,54 @@
 # RealEstate
 
-RealEstate Listing Optimizer is a Tauri desktop app for drafting and organizing real-estate listing copy and related marketing materials.
+RealEstate Listing Optimizer is a Tauri desktop app for real-estate agents who
+need one local workspace for property data, AI-assisted copy generation, export
+packages, and simple delivery analytics.
 
-## What It Does
+## Product Snapshot
 
-- Create and manage properties
-- Generate listing descriptions with style/tone/length presets
-- Generate social media posts and email campaigns
-- Learn a reusable "brand voice" from past listings
-- Store data locally (SQLite)
+The current app supports:
 
-AI generation uses Anthropic and requires an API key configured in **Settings** (keys start with `sk-ant-`).
+- property creation, editing, and deletion
+- photo import, photo ordering, and primary-photo selection
+- listing, social, and email generation powered by Anthropic
+- reusable brand-voice creation from sample listings
+- CSV property import with a downloadable template
+- dashboard analytics and setup-readiness guidance
+- PDF and DOCX export with selectable templates
+- local SQLite storage plus license-gated desktop access
 
-## Tech Stack
+AI generation requires an Anthropic API key configured in **Settings**. License
+activation is required before the desktop app can be used.
 
-- Tauri 2 (Rust)
-- React + TypeScript + Vite
-- Tailwind CSS
-- Vitest
-
-## Development
+## Quick Start
 
 Prerequisites:
 
-- Node.js + `pnpm`
-- Rust toolchain
-- Tauri system dependencies (see Tauri prerequisites: https://tauri.app/start/prerequisites/)
+- Node.js 20+
+- `pnpm`
+- Rust stable toolchain
+- Tauri system dependencies for your operating system:
+  [Tauri prerequisites](https://tauri.app/start/prerequisites/)
 
 Install dependencies:
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
-Run the web dev server (Vite):
+Run the frontend in the browser:
 
 ```sh
 pnpm dev
 ```
 
-Run the desktop app (Tauri + Vite):
+Run the desktop app:
 
 ```sh
 pnpm tauri dev
 ```
 
-Run the desktop app in lean mode (temporary build caches, auto-clean on exit):
+Run the desktop app in lean mode with temporary caches:
 
 ```sh
 pnpm dev:lean
@@ -57,30 +60,61 @@ Optional: change the lean dev port if `1420` is busy:
 LEAN_DEV_PORT=1422 pnpm dev:lean
 ```
 
-Run tests:
+## Verification
+
+The repo uses `.codex/verify.commands` as the canonical gate list. Run the full
+stack with:
 
 ```sh
-pnpm test
+pnpm verify
 ```
 
-Build:
+Useful focused commands:
+
+```sh
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:coverage
+pnpm build
+pnpm test:rust
+pnpm check:rust
+```
+
+## Build and Packaging
+
+Frontend production build:
 
 ```sh
 pnpm build
+```
+
+Desktop production build:
+
+```sh
 pnpm tauri build
 ```
 
-Cleanup commands:
+Cross-platform release packaging is defined in GitHub Actions under
+`.github/workflows/build.yml`. Public release publishing still depends on
+external signing credentials and release secrets that are not stored in this
+repository.
+
+## Local Maintenance
+
+Remove heavy build artifacts while keeping dependencies:
 
 ```sh
-# remove heavy build artifacts only (keeps dependencies for speed)
 pnpm clean:heavy
+```
 
-# remove all reproducible local caches (including node_modules)
+Remove reproducible local caches including `node_modules`:
+
+```sh
 pnpm clean:full
 ```
 
-Check current heavy-directory sizes:
+Check heavy-directory sizes:
 
 ```sh
 pnpm size:report
@@ -88,11 +122,23 @@ pnpm size:report
 
 ### Normal vs Lean Dev
 
-- Normal dev (`pnpm tauri dev`): fastest incremental rebuilds, but writes caches/artifacts into the repo (`src-tauri/target`, `node_modules/.vite`).
-- Lean dev (`pnpm dev:lean`): redirects Rust and Vite build caches to temporary directories and removes them automatically when the process exits.
-- Tradeoff: lean mode uses less persistent disk in the project but usually has slower startup and less incremental compile reuse between runs.
+- `pnpm tauri dev` is best when you want the fastest incremental rebuild loop.
+- `pnpm dev:lean` is best when you want to avoid large persistent cache
+  directories in the repo.
+- Lean mode trades some startup speed for lower repo-local disk usage.
+
+## Repo Guide
+
+- [User Guide](./docs/USER_GUIDE.md)
+- [CSV Import Reference](./docs/CSV_IMPORT_REFERENCE.md)
+- [Architecture Notes](./docs/ARCHITECTURE.md)
+- [Release Runbook](./docs/RELEASE_RUNBOOK.md)
+- [Support Runbook](./docs/SUPPORT_RUNBOOK.md)
+- [Troubleshooting](./docs/TROUBLESHOOTING.md)
 
 ## Project Layout
 
-- `src/`: frontend UI
-- `src-tauri/`: Tauri backend (Rust) and local migrations
+- `src/`: React frontend, stores, hooks, and desktop UI flows
+- `src-tauri/`: Tauri backend, commands, database access, exports, and migrations
+- `.codex/`: canonical verify commands plus local execution helpers
+- `scripts/`: git, performance, cleanup, and local workflow utilities
