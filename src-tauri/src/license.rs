@@ -147,10 +147,7 @@ mod tests {
 
         assert!(status.is_valid);
         assert!(status.license_key.is_empty());
-        assert_eq!(
-            status.error.as_deref(),
-            Some(DEVELOPMENT_BYPASS_MESSAGE)
-        );
+        assert_eq!(status.error.as_deref(), Some(DEVELOPMENT_BYPASS_MESSAGE));
         assert!(!status.validated_at.is_empty());
     }
 }

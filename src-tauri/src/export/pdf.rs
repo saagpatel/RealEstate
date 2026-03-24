@@ -233,17 +233,17 @@ fn load_font_family() -> Result<fonts::FontFamily<fonts::FontData>, AppError> {
             .all(|path| Path::new(path).exists())
         {
             return Ok(fonts::FontFamily {
-                regular: fonts::FontData::load(regular, None)
-                    .map_err(|e| AppError::Export(format!("Failed to load PDF font '{}': {}", regular, e)))?,
-                bold: fonts::FontData::load(bold, None)
-                    .map_err(|e| AppError::Export(format!("Failed to load PDF font '{}': {}", bold, e)))?,
-                italic: fonts::FontData::load(italic, None)
-                    .map_err(|e| AppError::Export(format!("Failed to load PDF font '{}': {}", italic, e)))?,
+                regular: fonts::FontData::load(regular, None).map_err(|e| {
+                    AppError::Export(format!("Failed to load PDF font '{}': {}", regular, e))
+                })?,
+                bold: fonts::FontData::load(bold, None).map_err(|e| {
+                    AppError::Export(format!("Failed to load PDF font '{}': {}", bold, e))
+                })?,
+                italic: fonts::FontData::load(italic, None).map_err(|e| {
+                    AppError::Export(format!("Failed to load PDF font '{}': {}", italic, e))
+                })?,
                 bold_italic: fonts::FontData::load(bold_italic, None).map_err(|e| {
-                    AppError::Export(format!(
-                        "Failed to load PDF font '{}': {}",
-                        bold_italic, e
-                    ))
+                    AppError::Export(format!("Failed to load PDF font '{}': {}", bold_italic, e))
                 })?,
             });
         }
