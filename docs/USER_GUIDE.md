@@ -15,7 +15,8 @@ RealEstate Listing Optimizer gives agents one desktop workspace for:
 
 When you first open the app, complete these steps in order:
 
-1. Activate your license.
+1. Activate your license on release builds. Local debug builds allow
+   development access without a production license key.
 2. Open **Settings** and add your Anthropic API key.
 3. Complete your agent profile details.
 4. Create your first property or import one from CSV.

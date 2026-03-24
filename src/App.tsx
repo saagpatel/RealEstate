@@ -26,11 +26,14 @@ function ApiKeyCheck() {
 
   useEffect(() => {
     if (isLoaded && !apiKey) {
-      toast("Add your Anthropic API key in Settings to start generating listings.", {
-        icon: "\u{1F511}",
-        duration: 6000,
-        id: "api-key-missing",
-      });
+      toast(
+        "Add your Anthropic API key in Settings to start generating listings.",
+        {
+          icon: "\u{1F511}",
+          duration: 6000,
+          id: "api-key-missing",
+        },
+      );
     }
   }, [isLoaded, apiKey]);
 
@@ -50,8 +53,13 @@ export default function App() {
       .then((status) => {
         setLicenseValid(status.isValid);
         if (status.error && status.isValid) {
-          // Offline mode warning
-          toast(status.error, { icon: "\u{1F4F6}", duration: 5000, id: "license-offline" });
+          const isDevelopmentBypass =
+            status.error.startsWith("Development mode:");
+          toast(status.error, {
+            icon: isDevelopmentBypass ? "\u{1F6E0}\u{FE0F}" : "\u{1F4F6}",
+            duration: 5000,
+            id: isDevelopmentBypass ? "license-dev-bypass" : "license-offline",
+          });
         }
       })
       .catch(() => {

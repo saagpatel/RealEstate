@@ -26,6 +26,10 @@ pub async fn check_license(db: State<'_, SqlitePool>) -> Result<LicenseStatus, A
     let license_key = settings::get(&db, "license_key").await.unwrap_or_default();
 
     if license_key.is_empty() {
+        if cfg!(debug_assertions) {
+            return Ok(license::development_license_status());
+        }
+
         return Ok(LicenseStatus {
             is_valid: false,
             license_key: String::new(),

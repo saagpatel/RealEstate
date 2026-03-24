@@ -2,8 +2,11 @@
 
 ## App opens to license activation
 
-That is expected when the desktop app does not yet have a valid license on the
-machine.
+That is expected on release builds when the desktop app does not yet have a
+valid license on the machine.
+
+Local debug builds bypass license enforcement so setup and smoke testing are not
+blocked by missing production credentials.
 
 Check:
 
