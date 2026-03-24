@@ -2,6 +2,7 @@ use genpdf::elements::{Break, Image, Paragraph};
 use genpdf::fonts;
 use genpdf::style::{Color, Style};
 use genpdf::{Document, Element, SimplePageDecorator};
+use std::path::Path;
 
 use crate::db::listings::Listing;
 use crate::db::photos::Photo;
@@ -17,31 +18,7 @@ pub fn generate_pdf(
     template: ExportTemplate,
 ) -> Result<Vec<u8>, AppError> {
     let config = template.config();
-    // Use built-in Helvetica font (always available)
-    let font_family = fonts::from_files("", "Helvetica", None).unwrap_or_else(|_| {
-        // Fallback: use Liberation Sans if Helvetica not found
-        // genpdf provides built-in fonts as fallback
-        fonts::from_files("", "LiberationSans", None).unwrap_or_else(|_| {
-            // Last resort: create a minimal font family
-            let font_data = genpdf::fonts::FontData::new(
-                Vec::new(), // Will fail gracefully
-                None,
-            );
-            let regular = match font_data {
-                Ok(f) => f,
-                Err(_) => {
-                    return fonts::from_files("/System/Library/Fonts", "Helvetica", None)
-                        .expect("Could not load any font")
-                }
-            };
-            genpdf::fonts::FontFamily {
-                regular: regular.clone(),
-                bold: regular.clone(),
-                italic: regular.clone(),
-                bold_italic: regular,
-            }
-        })
-    });
+    let font_family = load_font_family()?;
 
     let mut doc = Document::new(font_family);
     doc.set_title("Property Marketing Package");
@@ -216,6 +193,67 @@ pub fn generate_pdf(
     Ok(buf)
 }
 
+fn load_font_family() -> Result<fonts::FontFamily<fonts::FontData>, AppError> {
+    let font_candidates = [
+        (
+            "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Italic.ttf",
+            "/System/Library/Fonts/Supplemental/Arial Bold Italic.ttf",
+        ),
+        (
+            "/Library/Fonts/Arial.ttf",
+            "/Library/Fonts/Arial Bold.ttf",
+            "/Library/Fonts/Arial Italic.ttf",
+            "/Library/Fonts/Arial Bold Italic.ttf",
+        ),
+        (
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Italic.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-BoldItalic.ttf",
+        ),
+        (
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf",
+        ),
+        (
+            r"C:\Windows\Fonts\arial.ttf",
+            r"C:\Windows\Fonts\arialbd.ttf",
+            r"C:\Windows\Fonts\ariali.ttf",
+            r"C:\Windows\Fonts\arialbi.ttf",
+        ),
+    ];
+
+    for (regular, bold, italic, bold_italic) in font_candidates {
+        if [regular, bold, italic, bold_italic]
+            .iter()
+            .all(|path| Path::new(path).exists())
+        {
+            return Ok(fonts::FontFamily {
+                regular: fonts::FontData::load(regular, None)
+                    .map_err(|e| AppError::Export(format!("Failed to load PDF font '{}': {}", regular, e)))?,
+                bold: fonts::FontData::load(bold, None)
+                    .map_err(|e| AppError::Export(format!("Failed to load PDF font '{}': {}", bold, e)))?,
+                italic: fonts::FontData::load(italic, None)
+                    .map_err(|e| AppError::Export(format!("Failed to load PDF font '{}': {}", italic, e)))?,
+                bold_italic: fonts::FontData::load(bold_italic, None).map_err(|e| {
+                    AppError::Export(format!(
+                        "Failed to load PDF font '{}': {}",
+                        bold_italic, e
+                    ))
+                })?,
+            });
+        }
+    }
+
+    Err(AppError::Export(
+        "Failed to load a compatible PDF font family from the local system".to_string(),
+    ))
+}
+
 fn format_price_dollars(cents: i64) -> String {
     let dollars = cents / 100;
     let mut s = dollars.to_string();
@@ -233,10 +271,99 @@ fn format_price_dollars(cents: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::listings::Listing;
+    use crate::db::photos::Photo;
+    use crate::db::properties::Property;
+    use crate::export::templates::ExportTemplate;
+
+    fn sample_property() -> Property {
+        Property {
+            id: "property-1".to_string(),
+            address: "123 Oak St".to_string(),
+            city: "San Francisco".to_string(),
+            state: "CA".to_string(),
+            zip: "94105".to_string(),
+            beds: 3,
+            baths: 2.5,
+            sqft: 1800,
+            price: 95000000,
+            property_type: "single_family".to_string(),
+            year_built: Some(2015),
+            lot_size: None,
+            parking: None,
+            key_features: r#"["pool","hardwood floors"]"#.to_string(),
+            neighborhood: None,
+            neighborhood_highlights: "[]".to_string(),
+            school_district: None,
+            nearby_amenities: "[]".to_string(),
+            agent_notes: None,
+            created_at: "2024-01-01".to_string(),
+            updated_at: "2024-01-01".to_string(),
+        }
+    }
+
+    fn sample_listing() -> Listing {
+        Listing {
+            id: "listing-1".to_string(),
+            property_id: "property-1".to_string(),
+            content: "A beautiful home in San Francisco.\n\nThis stunning property features hardwood floors and a pool.".to_string(),
+            generation_type: "listing".to_string(),
+            style: Some("luxury".to_string()),
+            tone: Some("warm".to_string()),
+            length: Some("medium".to_string()),
+            seo_keywords: "[]".to_string(),
+            brand_voice_id: None,
+            tokens_used: 500,
+            generation_cost_cents: 1,
+            is_favorite: false,
+            created_at: "2024-01-01".to_string(),
+        }
+    }
+
+    fn missing_photo() -> Photo {
+        Photo {
+            id: "photo-1".to_string(),
+            property_id: "property-1".to_string(),
+            filename: "missing.jpg".to_string(),
+            original_path: "/tmp/realestate-missing-photo.jpg".to_string(),
+            thumbnail_path: "/tmp/realestate-missing-thumb.jpg".to_string(),
+            sort_order: 0,
+            caption: Some("Front exterior".to_string()),
+            created_at: "2024-01-01".to_string(),
+        }
+    }
 
     #[test]
     fn test_format_price_dollars() {
         assert_eq!(format_price_dollars(95000000), "950,000");
         assert_eq!(format_price_dollars(125000000), "1,250,000");
+    }
+
+    #[test]
+    fn test_generate_pdf_without_photos_for_minimal_template() {
+        let bytes = generate_pdf(
+            &sample_property(),
+            &[sample_listing()],
+            &[],
+            ExportTemplate::Minimal,
+        )
+        .expect("minimal template should render without photos");
+
+        assert!(bytes.starts_with(b"%PDF"));
+        assert!(bytes.len() > 100);
+    }
+
+    #[test]
+    fn test_generate_pdf_ignores_missing_photo_files() {
+        let bytes = generate_pdf(
+            &sample_property(),
+            &[sample_listing()],
+            &[missing_photo()],
+            ExportTemplate::Professional,
+        )
+        .expect("professional template should tolerate missing photo files");
+
+        assert!(bytes.starts_with(b"%PDF"));
+        assert!(bytes.len() > 100);
     }
 }

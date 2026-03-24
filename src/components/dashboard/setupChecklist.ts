@@ -21,8 +21,9 @@ export function buildSetupChecklist({
   return [
     {
       id: "license",
-      label: "License activated",
-      description: "Desktop access is unlocked and ready to use.",
+      label: "Desktop access ready",
+      description:
+        "A valid release license or local debug access is available for this workspace.",
       complete: hasLicenseAccess,
     },
     {

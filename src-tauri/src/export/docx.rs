@@ -227,6 +227,19 @@ mod tests {
         }
     }
 
+    fn missing_photo() -> Photo {
+        Photo {
+            id: "photo-1".to_string(),
+            property_id: "test".to_string(),
+            filename: "missing.jpg".to_string(),
+            original_path: "/tmp/realestate-missing-photo.jpg".to_string(),
+            thumbnail_path: "/tmp/realestate-missing-thumb.jpg".to_string(),
+            sort_order: 0,
+            caption: Some("Front exterior".to_string()),
+            created_at: "2024-01-01".to_string(),
+        }
+    }
+
     #[test]
     fn test_generate_docx_produces_valid_zip() {
         let property = sample_property();
@@ -235,6 +248,20 @@ mod tests {
         assert!(result.is_ok());
         let bytes = result.unwrap();
         // DOCX is a ZIP file — check magic bytes
+        assert!(bytes.len() > 4);
+        assert_eq!(&bytes[0..2], b"PK");
+    }
+
+    #[test]
+    fn test_generate_docx_ignores_missing_photo_files() {
+        let property = sample_property();
+        let listings = vec![sample_listing()];
+        let photos = vec![missing_photo()];
+
+        let result = generate_docx(&property, &listings, &photos, ExportTemplate::Professional);
+
+        assert!(result.is_ok());
+        let bytes = result.unwrap();
         assert!(bytes.len() > 4);
         assert_eq!(&bytes[0..2], b"PK");
     }

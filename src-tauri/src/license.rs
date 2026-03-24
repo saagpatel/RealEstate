@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use crate::error::AppError;
 
 const VALIDATE_URL: &str = "https://api.lemonsqueezy.com/v1/licenses/validate";
+const DEVELOPMENT_BYPASS_MESSAGE: &str =
+    "Development mode: license checks are bypassed locally. Release builds still require activation.";
 
 #[derive(Debug, Serialize)]
 struct ValidateRequest {
@@ -29,6 +31,15 @@ pub struct LicenseStatus {
     pub license_key: String,
     pub validated_at: String,
     pub error: Option<String>,
+}
+
+pub fn development_license_status() -> LicenseStatus {
+    LicenseStatus {
+        is_valid: true,
+        license_key: String::new(),
+        validated_at: chrono::Utc::now().to_rfc3339(),
+        error: Some(DEVELOPMENT_BYPASS_MESSAGE.to_string()),
+    }
 }
 
 /// Validate a license key against LemonSqueezy API
@@ -128,5 +139,18 @@ mod tests {
     #[test]
     fn test_is_cache_valid_invalid_string() {
         assert!(!is_cache_valid("not-a-date"));
+    }
+
+    #[test]
+    fn test_development_license_status_allows_local_debug_access() {
+        let status = development_license_status();
+
+        assert!(status.is_valid);
+        assert!(status.license_key.is_empty());
+        assert_eq!(
+            status.error.as_deref(),
+            Some(DEVELOPMENT_BYPASS_MESSAGE)
+        );
+        assert!(!status.validated_at.is_empty());
     }
 }

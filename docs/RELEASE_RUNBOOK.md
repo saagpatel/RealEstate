@@ -93,10 +93,18 @@ Before publishing the draft, manually confirm:
 Use these before or during release prep:
 
 ```sh
+pnpm release:check:versions
+pnpm test:smoke
 pnpm verify
 pnpm test:coverage
 pnpm test:rust
 pnpm tauri build --debug
+```
+
+For a single repo-native local release-candidate pass on macOS, you can run:
+
+```sh
+pnpm release:smoke:local
 ```
 
 ## Pre-signing package smoke
@@ -134,6 +142,9 @@ Note:
 - strict `codesign --verify` is not a pre-signing gate for the local debug
   bundle. Treat signing and notarization validation as a later release step
   once Apple credentials are available.
+- the local debug license bypass is only for development workflows. Do not
+  treat that bypass as release evidence; release candidates must still validate
+  real activation or cached-license startup behavior.
 
 ## Recommended smoke checklist
 

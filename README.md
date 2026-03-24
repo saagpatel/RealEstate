@@ -17,18 +17,23 @@ The current app supports:
 - PDF and DOCX export with selectable templates
 - local SQLite storage plus license-gated desktop access
 
-AI generation requires an Anthropic API key configured in **Settings**. License
-activation is required before the desktop app can be used.
+AI generation requires an Anthropic API key configured in **Settings**. Release
+builds require license activation before the desktop app can be used.
+Local debug builds allow development access without a production license so
+setup and smoke testing are not blocked by LemonSqueezy credentials.
 
 ## Quick Start
 
 Prerequisites:
 
-- Node.js 20+
+- Node.js 20.x
 - `pnpm`
 - Rust stable toolchain
 - Tauri system dependencies for your operating system:
   [Tauri prerequisites](https://tauri.app/start/prerequisites/)
+
+If you use `nvm`, run `nvm use` first. This repo now includes an `.nvmrc`
+aligned with the Node version family used in CI.
 
 Install dependencies:
 
@@ -72,6 +77,7 @@ pnpm verify
 Useful focused commands:
 
 ```sh
+pnpm test:smoke
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -79,6 +85,7 @@ pnpm test:coverage
 pnpm build
 pnpm test:rust
 pnpm check:rust
+pnpm release:smoke:local
 ```
 
 ## Build and Packaging
