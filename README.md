@@ -1,151 +1,70 @@
 # RealEstate
 
-RealEstate Listing Optimizer is a Tauri desktop app for real-estate agents who
-need one local workspace for property data, AI-assisted copy generation, export
-packages, and simple delivery analytics.
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&logo=typescript)](#) [![Rust](https://img.shields.io/badge/Rust-dea584?style=flat-square&logo=rust)](#) [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](#)
 
-## Product Snapshot
+> One local workspace for every listing — property data, AI-generated copy, branded exports, and analytics without juggling tabs or SaaS subscriptions.
 
-The current app supports:
+RealEstate Listing Optimizer is a native desktop app for real estate agents who need to produce polished listing materials quickly. Manage properties, import from CSV, generate listing copy for web, social, and email via Anthropic AI, export PDF and DOCX with selectable templates, and track delivery analytics — all from a single local app with SQLite storage.
 
-- property creation, editing, and deletion
-- photo import, photo ordering, and primary-photo selection
-- listing, social, and email generation powered by Anthropic
-- reusable brand-voice creation from sample listings
-- CSV property import with a downloadable template
-- dashboard analytics and setup-readiness guidance
-- PDF and DOCX export with selectable templates
-- local SQLite storage plus license-gated desktop access
+## Features
 
-AI generation requires an Anthropic API key configured in **Settings**. Release
-builds require license activation before the desktop app can be used.
-Local debug builds allow development access without a production license so
-setup and smoke testing are not blocked by LemonSqueezy credentials.
+- **Property management** — create, edit, delete listings with photo import, ordering, and primary-photo selection
+- **AI copy generation** — listing, social media, and email copy powered by Anthropic Claude
+- **Brand voice profiles** — create reusable voice profiles trained from your sample listings
+- **CSV import** — bulk import properties with a downloadable mapping template
+- **PDF & DOCX export** — professional exports with selectable layout templates
+- **Dashboard analytics** — setup-readiness guidance and delivery analytics
+- **Local-first** — all data stored in SQLite on your machine; no cloud sync required
 
 ## Quick Start
 
-Prerequisites:
+### Prerequisites
 
 - Node.js 20.x
 - `pnpm`
-- Rust stable toolchain
-- Tauri system dependencies for your operating system:
-  [Tauri prerequisites](https://tauri.app/start/prerequisites/)
+- Rust stable toolchain (`rustup`)
+- Tauri system dependencies: [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/)
 
-If you use `nvm`, run `nvm use` first. This repo now includes an `.nvmrc`
-aligned with the Node version family used in CI.
+```bash
+# If using nvm
+nvm use
+```
 
-Install dependencies:
+### Installation
 
-```sh
+```bash
+git clone https://github.com/saagpatel/RealEstate
+cd RealEstate
 pnpm install --frozen-lockfile
 ```
 
-Run the frontend in the browser:
+### Usage
 
-```sh
+```bash
+# Run frontend in browser
 pnpm dev
-```
 
-Run the desktop app:
-
-```sh
+# Run full desktop app
 pnpm tauri dev
 ```
 
-Run the desktop app in lean mode with temporary caches:
+AI copy generation requires an Anthropic API key configured in **Settings**.
 
-```sh
-pnpm dev:lean
-```
+## Tech Stack
 
-Optional: change the lean dev port if `1420` is busy:
+| Layer | Technology |
+|-------|------------|
+| Desktop shell | Tauri 2 |
+| Frontend | React, TypeScript, Vite, Tailwind CSS |
+| Backend | Rust — property storage, export generation |
+| AI | Anthropic Claude API |
+| Storage | SQLite (local app data dir) |
+| Exports | PDF, DOCX |
 
-```sh
-LEAN_DEV_PORT=1422 pnpm dev:lean
-```
+## Architecture
 
-## Verification
+The Rust backend owns all property data and file I/O — PDF and DOCX generation happen natively without external services. AI calls go directly to Anthropic from the Rust layer. Brand voice profiles are stored as structured data alongside listings, so copy generation can stay consistent across a portfolio without re-prompting from scratch each time.
 
-The repo uses `.codex/verify.commands` as the canonical gate list. Run the full
-stack with:
+## License
 
-```sh
-pnpm verify
-```
-
-Useful focused commands:
-
-```sh
-pnpm test:smoke
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm test:coverage
-pnpm build
-pnpm test:rust
-pnpm check:rust
-pnpm release:smoke:local
-```
-
-## Build and Packaging
-
-Frontend production build:
-
-```sh
-pnpm build
-```
-
-Desktop production build:
-
-```sh
-pnpm tauri build
-```
-
-Cross-platform release packaging is defined in GitHub Actions under
-`.github/workflows/build.yml`. Public release publishing still depends on
-external signing credentials and release secrets that are not stored in this
-repository.
-
-## Local Maintenance
-
-Remove heavy build artifacts while keeping dependencies:
-
-```sh
-pnpm clean:heavy
-```
-
-Remove reproducible local caches including `node_modules`:
-
-```sh
-pnpm clean:full
-```
-
-Check heavy-directory sizes:
-
-```sh
-pnpm size:report
-```
-
-### Normal vs Lean Dev
-
-- `pnpm tauri dev` is best when you want the fastest incremental rebuild loop.
-- `pnpm dev:lean` is best when you want to avoid large persistent cache
-  directories in the repo.
-- Lean mode trades some startup speed for lower repo-local disk usage.
-
-## Repo Guide
-
-- [User Guide](./docs/USER_GUIDE.md)
-- [CSV Import Reference](./docs/CSV_IMPORT_REFERENCE.md)
-- [Architecture Notes](./docs/ARCHITECTURE.md)
-- [Release Runbook](./docs/RELEASE_RUNBOOK.md)
-- [Support Runbook](./docs/SUPPORT_RUNBOOK.md)
-- [Troubleshooting](./docs/TROUBLESHOOTING.md)
-
-## Project Layout
-
-- `src/`: React frontend, stores, hooks, and desktop UI flows
-- `src-tauri/`: Tauri backend, commands, database access, exports, and migrations
-- `.codex/`: canonical verify commands plus local execution helpers
-- `scripts/`: git, performance, cleanup, and local workflow utilities
+MIT
