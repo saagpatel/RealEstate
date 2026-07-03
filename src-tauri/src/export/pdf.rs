@@ -219,7 +219,8 @@ fn render_items(fonts: &PdfFonts, items: &[PdfItem]) -> Result<Vec<u8>, AppError
                 } => {
                     if let Some(image) = load_image(path) {
                         surface.push_transform(&Transform::from_translate(MARGIN, y));
-                        surface.draw_image(image, Size::from_wh(IMAGE_WIDTH, IMAGE_HEIGHT).unwrap());
+                        surface
+                            .draw_image(image, Size::from_wh(IMAGE_WIDTH, IMAGE_HEIGHT).unwrap());
                         surface.pop();
                         y += IMAGE_HEIGHT + 6.0;
 
@@ -265,7 +266,11 @@ fn item_height(item: &PdfItem, text_width_chars: usize, image_height: f32) -> f3
         PdfItem::Text { text, size, .. } => {
             wrap_text(text, text_width_chars).len() as f32 * (*size + 4.0)
         }
-        PdfItem::Photo { caption, caption_size, .. } => {
+        PdfItem::Photo {
+            caption,
+            caption_size,
+            ..
+        } => {
             image_height
                 + 6.0
                 + caption
@@ -360,13 +365,23 @@ fn load_font_family() -> Result<PdfFonts, AppError> {
             .iter()
             .all(|path| Path::new(path).exists())
         {
-            let regular = Font::new(std::fs::read(regular).map_err(|e| {
-                AppError::Export(format!("Failed to load PDF font '{}': {}", regular, e))
-            })?.into(), 0)
+            let regular = Font::new(
+                std::fs::read(regular)
+                    .map_err(|e| {
+                        AppError::Export(format!("Failed to load PDF font '{}': {}", regular, e))
+                    })?
+                    .into(),
+                0,
+            )
             .ok_or_else(|| AppError::Export("Failed to parse PDF font".to_string()))?;
-            let bold = Font::new(std::fs::read(bold).map_err(|e| {
-                AppError::Export(format!("Failed to load PDF font '{}': {}", bold, e))
-            })?.into(), 0)
+            let bold = Font::new(
+                std::fs::read(bold)
+                    .map_err(|e| {
+                        AppError::Export(format!("Failed to load PDF font '{}': {}", bold, e))
+                    })?
+                    .into(),
+                0,
+            )
             .ok_or_else(|| AppError::Export("Failed to parse PDF bold font".to_string()))?;
 
             return Ok(PdfFonts { regular, bold });
