@@ -1,7 +1,11 @@
-use genpdf::elements::{Break, Image, Paragraph};
-use genpdf::fonts;
-use genpdf::style::{Color, Style};
-use genpdf::{Document, Element, SimplePageDecorator};
+use krilla::color::rgb;
+use krilla::geom::{Point, Size, Transform};
+use krilla::image::Image;
+use krilla::num::NormalizedF32;
+use krilla::page::PageSettings;
+use krilla::paint::Fill;
+use krilla::text::{Font, TextDirection};
+use krilla::{Data, Document};
 use std::path::Path;
 
 use crate::db::listings::Listing;
@@ -18,134 +22,85 @@ pub fn generate_pdf(
     template: ExportTemplate,
 ) -> Result<Vec<u8>, AppError> {
     let config = template.config();
-    let font_family = load_font_family()?;
+    let fonts = load_font_family()?;
+    let mut items = Vec::new();
 
-    let mut doc = Document::new(font_family);
-    doc.set_title("Property Marketing Package");
-
-    let mut decorator = SimplePageDecorator::new();
-    decorator.set_margins(20);
-    doc.set_page_decorator(decorator);
-
-    // Property header
-    doc.push(
-        Paragraph::new(format!(
+    items.push(PdfItem::Text {
+        text: format!(
             "{}, {}, {} {}",
             property.address, property.city, property.state, property.zip
-        ))
-        .styled(
-            Style::new()
-                .bold()
-                .with_font_size(config.header_font_size)
-                .with_color(Color::Rgb(
-                    config.primary_color.0,
-                    config.primary_color.1,
-                    config.primary_color.2,
-                )),
         ),
-    );
+        size: config.header_font_size as f32,
+        bold: true,
+        color: config.primary_color,
+    });
+    items.push(PdfItem::Spacer(8.0));
 
-    doc.push(Break::new(0.5));
-
-    // Property details
     let price = format_price_dollars(property.price);
-    doc.push(
-        Paragraph::new(format!(
+    items.push(PdfItem::Text {
+        text: format!(
             "${} | {} bed / {} bath / {} sqft | {}",
             price,
             property.beds,
             property.baths,
             property.sqft,
             property.property_type.replace('_', " "),
-        ))
-        .styled(Style::new().with_font_size(config.body_font_size)),
-    );
+        ),
+        size: config.body_font_size as f32,
+        bold: false,
+        color: (0, 0, 0),
+    });
 
     if let Some(ref year) = property.year_built {
-        doc.push(
-            Paragraph::new(format!("Built: {}", year))
-                .styled(Style::new().with_font_size(config.body_font_size)),
-        );
+        items.push(PdfItem::Text {
+            text: format!("Built: {}", year),
+            size: config.body_font_size as f32,
+            bold: false,
+            color: (0, 0, 0),
+        });
     }
 
-    doc.push(Break::new(1.0));
+    items.push(PdfItem::Spacer(16.0));
 
-    // Key features
     let features: Vec<String> = serde_json::from_str(&property.key_features).unwrap_or_default();
     if !features.is_empty() {
-        doc.push(
-            Paragraph::new("Key Features").styled(
-                Style::new()
-                    .bold()
-                    .with_font_size(config.header_font_size.saturating_sub(2))
-                    .with_color(Color::Rgb(
-                        config.primary_color.0,
-                        config.primary_color.1,
-                        config.primary_color.2,
-                    )),
-            ),
-        );
-        doc.push(
-            Paragraph::new(features.join(" • "))
-                .styled(Style::new().with_font_size(config.body_font_size)),
-        );
-        doc.push(Break::new(0.5));
+        items.push(PdfItem::Text {
+            text: "Key Features".to_string(),
+            size: config.header_font_size.saturating_sub(2) as f32,
+            bold: true,
+            color: config.primary_color,
+        });
+        items.push(PdfItem::Text {
+            text: features.join(" • "),
+            size: config.body_font_size as f32,
+            bold: false,
+            color: (0, 0, 0),
+        });
+        items.push(PdfItem::Spacer(8.0));
     }
 
-    // Photos section
     if config.include_photos && !photos.is_empty() {
-        doc.push(Break::new(1.0));
-        doc.push(
-            Paragraph::new("Property Photos").styled(
-                Style::new()
-                    .bold()
-                    .with_font_size(config.header_font_size.saturating_sub(2))
-                    .with_color(Color::Rgb(
-                        config.secondary_color.0,
-                        config.secondary_color.1,
-                        config.secondary_color.2,
-                    )),
-            ),
-        );
-        doc.push(Break::new(0.5));
+        items.push(PdfItem::Spacer(16.0));
+        items.push(PdfItem::Text {
+            text: "Property Photos".to_string(),
+            size: config.header_font_size.saturating_sub(2) as f32,
+            bold: true,
+            color: config.secondary_color,
+        });
+        items.push(PdfItem::Spacer(8.0));
 
-        // Add up to 6 photos (3x2 grid layout)
-        for (i, photo) in photos.iter().take(6).enumerate() {
-            match Image::from_path(&photo.original_path) {
-                Ok(img) => {
-                    doc.push(img.with_scale(genpdf::Scale::new(0.35, 0.35)));
-
-                    // Add caption if available
-                    if let Some(ref caption) = photo.caption {
-                        if !caption.is_empty() {
-                            doc.push(
-                                Paragraph::new(caption).styled(
-                                    Style::new()
-                                        .with_color(Color::Rgb(100, 100, 100))
-                                        .with_font_size(config.body_font_size.saturating_sub(1)),
-                                ),
-                            );
-                        }
-                    }
-
-                    // Add spacing between photos
-                    if i < photos.len() - 1 {
-                        doc.push(Break::new(0.5));
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Failed to add image {} to PDF: {}", photo.original_path, e);
-                    // Continue with other photos even if one fails
-                }
-            }
+        for photo in photos.iter().take(6) {
+            items.push(PdfItem::Photo {
+                path: photo.original_path.clone(),
+                caption: photo.caption.clone(),
+                caption_size: config.body_font_size.saturating_sub(1) as f32,
+            });
         }
-
-        doc.push(Break::new(1.0));
+        items.push(PdfItem::Spacer(16.0));
     }
 
-    // Listings
     for (i, listing) in listings.iter().enumerate() {
-        doc.push(Break::new(1.0));
+        items.push(PdfItem::Spacer(16.0));
 
         let section_title = match listing.generation_type.as_str() {
             "listing" => format!("Listing Description {}", i + 1),
@@ -158,42 +113,215 @@ pub fn generate_pdf(
             t => t.to_string(),
         };
 
-        doc.push(
-            Paragraph::new(section_title).styled(
-                Style::new()
-                    .bold()
-                    .with_font_size(config.header_font_size.saturating_sub(2))
-                    .with_color(Color::Rgb(
-                        config.primary_color.0,
-                        config.primary_color.1,
-                        config.primary_color.2,
-                    )),
-            ),
-        );
-        doc.push(Break::new(0.3));
+        items.push(PdfItem::Text {
+            text: section_title,
+            size: config.header_font_size.saturating_sub(2) as f32,
+            bold: true,
+            color: config.primary_color,
+        });
+        items.push(PdfItem::Spacer(5.0));
 
-        // Split content by paragraphs for better formatting
         for paragraph in listing.content.split("\n\n") {
             let trimmed = paragraph.trim();
             if !trimmed.is_empty() {
-                doc.push(
-                    Paragraph::new(trimmed)
-                        .styled(Style::new().with_font_size(config.body_font_size)),
-                );
-                doc.push(Break::new(0.3));
+                items.push(PdfItem::Text {
+                    text: trimmed.to_string(),
+                    size: config.body_font_size as f32,
+                    bold: false,
+                    color: (0, 0, 0),
+                });
+                items.push(PdfItem::Spacer(5.0));
             }
         }
     }
 
-    // Render to bytes
-    let mut buf = Vec::new();
-    doc.render(&mut buf)
-        .map_err(|e| AppError::Export(format!("Failed to render PDF: {}", e)))?;
-
-    Ok(buf)
+    render_items(&fonts, &items)
 }
 
-fn load_font_family() -> Result<fonts::FontFamily<fonts::FontData>, AppError> {
+struct PdfFonts {
+    regular: Font,
+    bold: Font,
+}
+
+enum PdfItem {
+    Text {
+        text: String,
+        size: f32,
+        bold: bool,
+        color: (u8, u8, u8),
+    },
+    Photo {
+        path: String,
+        caption: Option<String>,
+        caption_size: f32,
+    },
+    Spacer(f32),
+}
+
+fn render_items(fonts: &PdfFonts, items: &[PdfItem]) -> Result<Vec<u8>, AppError> {
+    const PAGE_WIDTH: f32 = 595.0;
+    const PAGE_HEIGHT: f32 = 842.0;
+    const MARGIN: f32 = 40.0;
+    const TEXT_WIDTH_CHARS: usize = 92;
+    const IMAGE_WIDTH: f32 = 220.0;
+    const IMAGE_HEIGHT: f32 = 140.0;
+
+    let mut document = Document::new();
+    let mut index = 0;
+
+    while index < items.len() {
+        let mut page = document.start_page_with(
+            PageSettings::from_wh(PAGE_WIDTH, PAGE_HEIGHT)
+                .ok_or_else(|| AppError::Export("Invalid PDF page size".to_string()))?,
+        );
+        let mut surface = page.surface();
+        let mut y = MARGIN;
+
+        while index < items.len() {
+            let needed = item_height(&items[index], TEXT_WIDTH_CHARS, IMAGE_HEIGHT);
+            if y + needed > PAGE_HEIGHT - MARGIN && y > MARGIN {
+                break;
+            }
+
+            match &items[index] {
+                PdfItem::Text {
+                    text,
+                    size,
+                    bold,
+                    color,
+                } => {
+                    surface.set_fill(Some(Fill {
+                        paint: rgb::Color::new(color.0, color.1, color.2).into(),
+                        opacity: NormalizedF32::ONE,
+                        rule: Default::default(),
+                    }));
+                    let font = if *bold {
+                        fonts.bold.clone()
+                    } else {
+                        fonts.regular.clone()
+                    };
+                    for line in wrap_text(text, TEXT_WIDTH_CHARS) {
+                        surface.draw_text(
+                            Point::from_xy(MARGIN, y),
+                            font.clone(),
+                            *size,
+                            &line,
+                            false,
+                            TextDirection::Auto,
+                        );
+                        y += *size + 4.0;
+                    }
+                }
+                PdfItem::Photo {
+                    path,
+                    caption,
+                    caption_size,
+                } => {
+                    if let Some(image) = load_image(path) {
+                        surface.push_transform(&Transform::from_translate(MARGIN, y));
+                        surface.draw_image(image, Size::from_wh(IMAGE_WIDTH, IMAGE_HEIGHT).unwrap());
+                        surface.pop();
+                        y += IMAGE_HEIGHT + 6.0;
+
+                        if let Some(caption) = caption {
+                            if !caption.trim().is_empty() {
+                                surface.set_fill(Some(Fill {
+                                    paint: rgb::Color::new(100, 100, 100).into(),
+                                    opacity: NormalizedF32::ONE,
+                                    rule: Default::default(),
+                                }));
+                                surface.draw_text(
+                                    Point::from_xy(MARGIN, y),
+                                    fonts.regular.clone(),
+                                    *caption_size,
+                                    caption,
+                                    false,
+                                    TextDirection::Auto,
+                                );
+                                y += *caption_size + 6.0;
+                            }
+                        }
+                    } else {
+                        eprintln!("Failed to add image {} to PDF", path);
+                    }
+                }
+                PdfItem::Spacer(height) => y += *height,
+            }
+
+            index += 1;
+        }
+
+        surface.finish();
+        page.finish();
+    }
+
+    document
+        .finish()
+        .map_err(|e| AppError::Export(format!("Failed to render PDF: {}", e)))
+}
+
+fn item_height(item: &PdfItem, text_width_chars: usize, image_height: f32) -> f32 {
+    match item {
+        PdfItem::Text { text, size, .. } => {
+            wrap_text(text, text_width_chars).len() as f32 * (*size + 4.0)
+        }
+        PdfItem::Photo { caption, caption_size, .. } => {
+            image_height
+                + 6.0
+                + caption
+                    .as_ref()
+                    .filter(|caption| !caption.trim().is_empty())
+                    .map(|_| *caption_size + 6.0)
+                    .unwrap_or(0.0)
+        }
+        PdfItem::Spacer(height) => *height,
+    }
+}
+
+fn wrap_text(text: &str, max_chars: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+
+    for word in text.split_whitespace() {
+        if !current.is_empty() && current.len() + word.len() + 1 > max_chars {
+            lines.push(current);
+            current = String::new();
+        }
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        current.push_str(word);
+    }
+
+    if !current.is_empty() {
+        lines.push(current);
+    }
+
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+
+    lines
+}
+
+fn load_image(path: &str) -> Option<Image> {
+    let data = std::fs::read(path).ok()?;
+    let extension = Path::new(path)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.to_ascii_lowercase())?;
+    let data = Data::from(data);
+
+    match extension.as_str() {
+        "png" => Image::from_png(data, true).ok(),
+        "jpg" | "jpeg" => Image::from_jpeg(data, true).ok(),
+        "gif" => Image::from_gif(data, true).ok(),
+        "webp" => Image::from_webp(data, true).ok(),
+        _ => None,
+    }
+}
+
+fn load_font_family() -> Result<PdfFonts, AppError> {
     let font_candidates = [
         (
             "/System/Library/Fonts/Supplemental/Arial.ttf",
@@ -232,20 +360,16 @@ fn load_font_family() -> Result<fonts::FontFamily<fonts::FontData>, AppError> {
             .iter()
             .all(|path| Path::new(path).exists())
         {
-            return Ok(fonts::FontFamily {
-                regular: fonts::FontData::load(regular, None).map_err(|e| {
-                    AppError::Export(format!("Failed to load PDF font '{}': {}", regular, e))
-                })?,
-                bold: fonts::FontData::load(bold, None).map_err(|e| {
-                    AppError::Export(format!("Failed to load PDF font '{}': {}", bold, e))
-                })?,
-                italic: fonts::FontData::load(italic, None).map_err(|e| {
-                    AppError::Export(format!("Failed to load PDF font '{}': {}", italic, e))
-                })?,
-                bold_italic: fonts::FontData::load(bold_italic, None).map_err(|e| {
-                    AppError::Export(format!("Failed to load PDF font '{}': {}", bold_italic, e))
-                })?,
-            });
+            let regular = Font::new(std::fs::read(regular).map_err(|e| {
+                AppError::Export(format!("Failed to load PDF font '{}': {}", regular, e))
+            })?.into(), 0)
+            .ok_or_else(|| AppError::Export("Failed to parse PDF font".to_string()))?;
+            let bold = Font::new(std::fs::read(bold).map_err(|e| {
+                AppError::Export(format!("Failed to load PDF font '{}': {}", bold, e))
+            })?.into(), 0)
+            .ok_or_else(|| AppError::Export("Failed to parse PDF bold font".to_string()))?;
+
+            return Ok(PdfFonts { regular, bold });
         }
     }
 
