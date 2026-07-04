@@ -52,17 +52,15 @@ mod tests {
 
         // Verify all 5 tables were created by migrations
         let tables = vec![
-            "properties",
-            "photos",
-            "brand_voices",
-            "listings",
-            "settings",
+            ("properties", "SELECT COUNT(*) FROM properties"),
+            ("photos", "SELECT COUNT(*) FROM photos"),
+            ("brand_voices", "SELECT COUNT(*) FROM brand_voices"),
+            ("listings", "SELECT COUNT(*) FROM listings"),
+            ("settings", "SELECT COUNT(*) FROM settings"),
         ];
 
-        for table in tables {
-            let result = sqlx::query(&format!("SELECT COUNT(*) FROM {}", table))
-                .fetch_one(&pool)
-                .await;
+        for (table, query) in tables {
+            let result = sqlx::query(query).fetch_one(&pool).await;
 
             assert!(
                 result.is_ok(),
