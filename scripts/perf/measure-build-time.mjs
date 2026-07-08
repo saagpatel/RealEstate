@@ -1,14 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const npmExecPath = process.env.npm_execpath;
-if (!npmExecPath) {
-  console.error("npm_execpath is not set; run this script through pnpm, npm, or yarn.");
+const packageManager = process.env.npm_execpath;
+if (!packageManager) {
+  console.error(
+    "npm_execpath is not set; run this script through pnpm, npm, or yarn.",
+  );
   process.exit(1);
 }
 
 const start = Date.now();
-const result = spawnSync(process.execPath, [npmExecPath, "run", "build"], {
+const result = spawnSync(packageManager, ["run", "build"], {
   stdio: "inherit",
 });
 const end = Date.now();
@@ -20,7 +22,7 @@ writeFileSync(
     {
       buildMs: end - start,
       capturedAt: new Date().toISOString(),
-      command: "npm_execpath run build",
+      command: "package-manager run build",
     },
     null,
     2,
