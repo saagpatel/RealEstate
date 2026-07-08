@@ -1,1 +1,128 @@
-@.github/workflows/version-bump.yml
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      changelog_entry:
+        description: "Changelog entry (what changed)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.31.0
+
+      - name: Bump package.json version
+        id: package_version
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Bump version based on input
+          NEW_VERSION=$(pnpm version ${{ inputs.version_type }} --no-git-tag-version | tail -n 1 | sed 's/v//')
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Cargo.toml version
+        working-directory: ./src-tauri
+        run: |
+          NEW_VERSION="${{ steps.package_version.outputs.new_version }}"
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+
+      - name: Update tauri.conf.json version
+        working-directory: ./src-tauri
+        run: |
+          NEW_VERSION="${{ steps.package_version.outputs.new_version }}"
+          jq ".version = \"$NEW_VERSION\"" tauri.conf.json > tauri.conf.json.tmp
+          mv tauri.conf.json.tmp tauri.conf.json
+
+      - name: Update CHANGELOG.md
+        run: |
+          NEW_VERSION="${{ steps.package_version.outputs.new_version }}"
+          DATE=$(date +%Y-%m-%d)
+
+          # Create new changelog entry
+          echo -e "## [$NEW_VERSION] - $DATE\n\n${{ inputs.changelog_entry }}\n" > CHANGELOG_NEW.md
+
+          # Prepend to existing changelog or create new
+          if [ -f "CHANGELOG.md" ]; then
+            tail -n +2 CHANGELOG.md >> CHANGELOG_NEW.md
+          fi
+
+          mv CHANGELOG_NEW.md CHANGELOG.md
+
+      - name: Prepare release branch name
+        id: release_branch
+        run: |
+          NEW_VERSION="${{ steps.package_version.outputs.new_version }}"
+          echo "branch_name=codex/chore/release-v${NEW_VERSION//./-}" >> "$GITHUB_OUTPUT"
+
+      - name: Open release prep PR
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          add-paths: |
+            package.json
+            src-tauri/Cargo.toml
+            src-tauri/tauri.conf.json
+            CHANGELOG.md
+          commit-message: "chore: prepare release v${{ steps.package_version.outputs.new_version }}"
+          branch: ${{ steps.release_branch.outputs.branch_name }}
+          base: ${{ github.event.repository.default_branch }}
+          delete-branch: true
+          title: "chore: prepare release v${{ steps.package_version.outputs.new_version }}"
+          body: |
+            ## What
+            - prepare release v${{ steps.package_version.outputs.new_version }}
+            - sync desktop app version files
+            - add the requested changelog entry
+
+            ## Why
+            - keep release preparation on a `codex/*` branch before tagging and publishing
+
+            ## How
+            - bump package, Cargo, and Tauri app versions together
+            - update CHANGELOG.md for the release candidate
+
+            ## Testing
+            - Commands run:
+            - Results:
+
+            ## Performance impact
+            - Bundle delta:
+            - Build time delta:
+            - Asset delta:
+            - Memory delta:
+
+            ## Risk / Notes
+            - Tag and publish only after this PR is merged and the release workflow passes.
