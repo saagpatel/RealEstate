@@ -20,7 +20,7 @@ RealEstate Listing Optimizer is a native desktop app for real estate agents who 
 
 ### Prerequisites
 
-- Node.js 20.x
+- Node.js 24.x
 - `pnpm`
 - Rust stable toolchain (`rustup`)
 - Tauri system dependencies: [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/)
