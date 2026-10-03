@@ -6,7 +6,7 @@ Thank you for your interest in contributing!
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Make your changes
+3. Make your changes and follow [README verification](README.md#verification), including the linked canonical command list
 4. Commit using [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, etc.
 5. Push and open a pull request
 
